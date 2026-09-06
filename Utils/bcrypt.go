@@ -1,7 +1,6 @@
 package Utils
 
 import (
-	"MyGO-IM/DB"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 )
@@ -14,10 +13,8 @@ func CreateHashPwd(password string) (hashPwd string, err error) {
 	}
 	return string(hashPwdTep), nil
 }
-func VerifyPwd(userEmail, password string) (OK bool) {
-
-	user, _ := DB.QueryUser(userEmail, DB.ByEmail)
-	err := bcrypt.CompareHashAndPassword([]byte(user[0].Password), []byte(password))
+func VerifyPwd(hashPwd, password string) (OK bool) {
+	err := bcrypt.CompareHashAndPassword([]byte(hashPwd), []byte(password))
 	if err != nil {
 		return false
 	}

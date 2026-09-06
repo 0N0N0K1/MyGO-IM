@@ -85,7 +85,7 @@ func AddFriend(c *gin.Context) {
 	}
 	result, _ := DB.QueryFrd(userID.(uint), frd[0].ID, DB.ByID)
 	//是否已添加
-	if result[0].Name != "" {
+	if len(result) != 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Repeated addition"})
 		return
 	}
@@ -96,4 +96,29 @@ func AddFriend(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
+}
+
+// DeleteFriend 删除好友
+func DeleteFriend(c *gin.Context) {
+	userID, _ := c.Get("ID")
+	frdID := c.Query("id")
+	var err error
+	fID, err := strconv.Atoi(frdID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "String2int error"})
+		return
+	}
+	frd, err := DB.QueryFrd(userID.(uint), fID, DB.ByID)
+	//是否已添加
+	if frd[0].Name == "" || userID == fID || err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Illegal delete"})
+		return
+	}
+	//插入到中间表
+	err = DB.DeleteFrd(userID.(uint), uint(fID))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "DeleteFrd: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful delete!"})
 }

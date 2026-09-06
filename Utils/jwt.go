@@ -5,17 +5,18 @@ import (
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"strconv"
 	"time"
 )
 
 var MySecret = []byte(Conf.Conf.J.Secret)
 
-func CreateJWT(userName string) (string, error) {
+func CreateJWT(userID uint) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Issuer:    "RippleHeart",
 		Subject:   "OK",
-		Audience:  []string{userName},
+		Audience:  []string{strconv.Itoa(int(userID))},
 		ID:        uuid.NewString(),
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(Conf.Conf.J.TTL))),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),

@@ -24,8 +24,9 @@ func InitRouters() {
 	{
 		User.GET("/friends", Service.GetFriends)
 		User.POST("/friends", Service.AddFriend)
+		User.DELETE("/friends", Service.DeleteFriend)
 
-		User.POST("/groups/:groupname", Service.CreateGroup)
+		User.POST("/groupse", Service.CreateGroup)
 		User.PATCH("/groups/:groupname", Service.EnterGroup)
 		User.GET("/groups/:groupname", Service.GetMembers)
 

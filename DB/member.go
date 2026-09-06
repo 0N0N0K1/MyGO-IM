@@ -11,7 +11,6 @@ func InsertMember(memberID uint, groupName string) (err error) {
 		var member = GroupUser{
 			GroupID: groupID,
 			UserID:  memberID,
-			Break:   false,
 		}
 		err = MySQL.Table("group_users").Create(&member).Error
 	}

@@ -35,7 +35,7 @@ type UserInfo struct {
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 
-	User *User `gorm:"foreignKey:UserID;references:ID"`
+	User *User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 type Group struct {
@@ -44,29 +44,27 @@ type Group struct {
 	OwnerID   uint   `gorm:"not null;comment:群主ID"`
 	OwnerName string `gorm:"size:100;not null"`
 
-	Owner *User `gorm:"foreignKey:OwnerID;references:ID" json:"-"`
+	Owner *User `gorm:"foreignKey:OwnerID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 type UserUser struct {
 	ActiveID  uint      `gorm:"primaryKey;comment:主动添加方"`
 	PassiveID uint      `gorm:"primaryKey;comment:被动添加方"`
-	Break     bool      `gorm:"default:false;comment:是否拉黑/解除"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 
-	Active  *User `gorm:"foreignKey:ActiveID;references:ID"`
-	Passive *User `gorm:"foreignKey:PassiveID;references:ID"`
+	Active  *User `gorm:"foreignKey:ActiveID;references:ID;constraint:OnDelete:CASCADE"`
+	Passive *User `gorm:"foreignKey:PassiveID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 type GroupUser struct {
 	GroupID   uint      `gorm:"primaryKey"`
 	UserID    uint      `gorm:"primaryKey"`
-	Break     bool      `gorm:"default:false;comment:是否禁言/踢出"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 
-	Group *Group `gorm:"foreignKey:GroupID;references:ID" json:"-"`
-	User  *User  `gorm:"foreignKey:UserID;references:ID" json:"-"`
+	Group *Group `gorm:"foreignKey:GroupID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	User  *User  `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 type GroupMessage struct {
 	ID       uint `gorm:"primaryKey"`
@@ -76,8 +74,8 @@ type GroupMessage struct {
 	ToName   string
 	Content  string `gorm:"type:text"`
 
-	To   *Group `gorm:"foreignKey:ToID;references:ID"  json:"-"`
-	From *User  `gorm:"foreignKey:FromID;references:ID"  json:"-"`
+	To   *Group `gorm:"foreignKey:ToID;references:ID;constraint:OnDelete:CASCADE"  json:"-"`
+	From *User  `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE"  json:"-"`
 }
 type PrivateMessage struct {
 	ID       uint `gorm:"primaryKey"`
@@ -87,6 +85,6 @@ type PrivateMessage struct {
 	ToName   string
 	Content  string `gorm:"type:text"`
 
-	To   *User `gorm:"foreignKey:ToID;references:ID" json:"-"`
-	From *User `gorm:"foreignKey:FromID;references:ID" json:"-"`
+	To   *User `gorm:"foreignKey:ToID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	From *User `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }

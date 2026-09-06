@@ -64,7 +64,7 @@ func QueryMessage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": "0", "messages": messages, "err": err})
 }
 
-// ChangePassword 用于管理员修改User密码API的处理函数
+// ChangePassword 用于admin修改User密码API的处理函数
 func ChangePassword(c *gin.Context) {
 	userID := c.Query("id")
 	userNewPwd := c.Query("password")
@@ -122,6 +122,7 @@ func BanUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": "0", "message": "Banned!", "time": banTime + " * Hour", "user": user})
 }
 
+// QueryUser 用于admin查看用户具体信息
 func QueryUser(c *gin.Context) {
 	userID := c.Query("id")
 	id, err := strconv.Atoi(userID)

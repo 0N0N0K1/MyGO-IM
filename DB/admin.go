@@ -3,6 +3,7 @@ package DB
 import (
 	"context"
 	"errors"
+	"log"
 	"strconv"
 	"time"
 )
@@ -26,7 +27,7 @@ func UpdateUser(user *User) error {
 
 // QueryUser 查询用户关键信息（by name/id）
 func QueryUser(input any, option int) ([]User, error) {
-	var result []User
+	var result = make([]User, 0)
 	switch option {
 	case ByID:
 		MySQL.Table("users").Select("*").Where("id=?", input).First(&result)
@@ -34,6 +35,7 @@ func QueryUser(input any, option int) ([]User, error) {
 		MySQL.Table("users").Select("*").Where("email=?", input).First(&result)
 	case ByName:
 		MySQL.Table("users").Select("*").Where("name=?", input).Find(&result)
+		log.Println(result)
 	default:
 		return []User{}, errors.New("option error")
 	}

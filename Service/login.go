@@ -17,6 +17,7 @@ type LoginForm struct {
 	Nickname string `json:"nickname"`
 }
 
+// Login 获取验证码后登录
 func Login(c *gin.Context) {
 	var postform LoginForm
 	if err := c.BindJSON(&postform); err != nil {
@@ -33,28 +34,29 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Invalid auth-code"})
 		return
 	}
-	if !Utils.VerifyPwd(postform.Email, postform.Password) {
-		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Incorrect password or email address"})
-		return
-	}
-	token, err := Utils.CreateJWT(postform.Email)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "CreateJWT: " + err.Error()})
-		return
-	}
 	user, err := DB.QueryUser(postform.Email, DB.ByEmail)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "QueryUser: " + err.Error()})
+		return
+	}
+	if !Utils.VerifyPwd(user[0].Password, postform.Password) {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Incorrect password or email address"})
 		return
 	}
 	if ban, reason, t := DB.QueryIfBan(strconv.Itoa(int(user[0].ID))); ban {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "YOU ARE BANNED!!!", "reason": reason, "remain-time": t})
 		return
 	}
+	token, err := Utils.CreateJWT(user[0].ID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "CreateJWT: " + err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": "0", "msg": "Login successfully!", "token": token})
 
 }
 
+// Register 获取验证码后注册
 func Register(c *gin.Context) {
 	var postform LoginForm
 
@@ -73,7 +75,7 @@ func Register(c *gin.Context) {
 		return
 	}
 	user, err := DB.QueryUser(postform.Email, DB.ByEmail)
-	if user[0].Name != "" {
+	if len(user) != 0 || err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "This email address is already registered"})
 		return
 	}
@@ -98,16 +100,16 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "InsertUserInfo: " + err.Error()})
 		return
 	}
-	token, err := Utils.CreateJWT(postform.Email)
+	token, err := Utils.CreateJWT(user[0].ID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "CreateJWT: " + err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Register successfully!", "token": token})
 
 }
 
+// AuthCode 获取验证码
 func AuthCode(c *gin.Context) {
 	var postform LoginForm
 
@@ -133,8 +135,9 @@ func AuthCode(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Auth code is sent!"})
 
 	case "register":
+
 		user, err := DB.QueryUser(postform.Email, DB.ByEmail)
-		if user[0].Name != "" || err != nil {
+		if len(user) != 0 || err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 100, "error": "This email address is already registered"})
 			return
 		}
