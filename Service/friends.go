@@ -22,7 +22,7 @@ func GetFriends(c *gin.Context) {
 func AddFriend(c *gin.Context) {
 	userID, _ := c.Get("ID")
 	frdName := c.Param("friendname")
-	frd, err := DB.QueryUser(frdName)
+	frd, err := DB.QueryUser(frdName, DB.ByName)
 	//对方是否存在，是否为自己
 	if frd.ID == 0 || userID == frd.ID || err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "102", "msg": "Illegal Addition!"})

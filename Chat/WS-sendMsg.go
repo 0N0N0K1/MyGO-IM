@@ -10,7 +10,7 @@ import (
 func (c *Client) SendPrivate(msg Message) {
 	var frd DB.User
 	// 判断是否为好友
-	userTo, _ := DB.QueryUser(msg.ToID)
+	userTo, _ := DB.QueryUser(msg.ToID, DB.ByID)
 	if userTo.ID != 0 {
 		frd = DB.QueryFrd(msg.FromID, userTo.ID)
 	}

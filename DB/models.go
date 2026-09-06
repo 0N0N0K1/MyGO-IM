@@ -14,6 +14,7 @@ type User struct {
 	Name       string `gorm:"size:64;not null"`
 	Online     int    `gorm:"-"`
 	LastOnline *time.Time
+	Email      string         `gorm:"size:128;unique"`
 	DeletedAt  gorm.DeletedAt `gorm:"index"`
 	Password   string         `gorm:"size:255;not null" json:"password,omitempty"`
 }
@@ -21,7 +22,6 @@ type User struct {
 type UserInfo struct {
 	UserID    uint   `gorm:"primaryKey"` // 关联到 User.ID
 	Addr      string `gorm:"size:255"`
-	Email     string `gorm:"size:128"`
 	Age       int
 	Gender    string    `gorm:"size:10"`
 	Signature string    `gorm:"size:255"`

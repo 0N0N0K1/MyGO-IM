@@ -8,7 +8,7 @@ mysql:
   password: "006620"
   host: 127.0.0.1
   port: 3306
-  db: mygoim
+  db: mygo_im
   MaxIdleConns: 10
   MaxOpenConns: 300
 

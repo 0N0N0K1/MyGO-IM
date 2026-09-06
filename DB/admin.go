@@ -8,9 +8,10 @@ import (
 )
 
 // InsertUser 插入用户/注册
-func InsertUser(name string, pwd string) error {
+func InsertUser(name, email string, pwd string) error {
 	var user = User{
 		Name:     name,
+		Email:    email,
 		Password: pwd,
 	}
 	err := MySQL.Table("users").Create(&user).Error
@@ -24,12 +25,20 @@ func UpdateUser(user *User) error {
 }
 
 // QueryUser 查询用户关键信息（by name/id）
-func QueryUser(input any) (User, error) {
+const (
+	ByID = iota
+	ByEmail
+	ByName
+)
+
+func QueryUser(input any, tag int) (User, error) {
 	var result User
-	switch input.(type) {
-	case uint:
+	switch tag {
+	case 0:
 		MySQL.Table("users").Select("*").Where("id=?", input).First(&result)
-	case string:
+	case 1:
+		MySQL.Table("users").Select("*").Where("email=?", input).First(&result)
+	case 2:
 		MySQL.Table("users").Select("*").Where("name=?", input).First(&result)
 	default:
 		return User{}, errors.New("input type error")
@@ -95,11 +104,13 @@ func BanUserHelper(userID uint, t int, reason string) error {
 	return err
 }
 
-func QueryIfBan(userID string) (ban bool, reason string) {
+func QueryIfBan(userID string) (ban bool, reason string, t time.Duration) {
 	cmd := RDB.Get(context.TODO(), userID)
 	if cmd.Err() != nil {
-		return false, ""
+		return false, "", 0
 	}
-	s := cmd.String()
-	return true, s
+	cmd2 := RDB.TTL(context.TODO(), userID)
+	t, _ = cmd2.Result()
+	reason = cmd.String()
+	return true, reason, t
 }

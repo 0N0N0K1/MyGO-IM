@@ -73,15 +73,13 @@ func ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": err.Error()})
 		return
 	}
-	user, err := DB.QueryUser(uint(id))
+	user, err := DB.QueryUser(uint(id), DB.ByID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Query user by ID error" + err.Error()})
 		return
 	}
 
-	var container Utils.LoginForm
-	container.Password = userNewPwd
-	pwd, err := container.CreateHashPwd()
+	pwd, err := Utils.CreateHashPwd(userNewPwd)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Update password error"})
 		return
@@ -111,7 +109,7 @@ func BanUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1003", "err": err.Error()})
 		return
 	}
-	user, err := DB.QueryUser(uint(id))
+	user, err := DB.QueryUser(uint(id), DB.ByID)
 	if err != nil || user.ID == 0 {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Query user by ID error"})
 		return

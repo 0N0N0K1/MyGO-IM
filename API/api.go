@@ -14,6 +14,7 @@ func InitRouters() {
 	AdminEngine = gin.Default()
 	UserEngine.POST("/login", Service.Login)
 	UserEngine.POST("/register", Service.Register)
+	UserEngine.POST("/send-code", Service.AuthCode)
 
 	// 用户组API
 	User := UserEngine.Group("/users/:name")
