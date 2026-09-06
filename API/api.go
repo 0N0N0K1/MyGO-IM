@@ -1,8 +1,8 @@
 package API
 
 import (
+	"MyGO-IM/Service"
 	"github.com/gin-gonic/gin"
-	"mygoim/Service"
 	"net/http"
 )
 

@@ -1,10 +1,10 @@
 package Service
 
 import (
+	"MyGO-IM/DB"
+	"MyGO-IM/Utils"
 	"context"
 	"github.com/gin-gonic/gin"
-	"mygoim/DB"
-	"mygoim/Utils"
 	"net/http"
 	"strconv"
 )

@@ -1,14 +1,14 @@
 package Service
 
 import (
+	"MyGO-IM/Chat"
+	"MyGO-IM/Utils"
 	"context"
 	"encoding/json"
-	"mygoim/Chat"
-	"mygoim/Utils"
 
 	"github.com/gin-gonic/gin"
 
-	"mygoim/DB"
+	"MyGO-IM/DB"
 	"net/http"
 	"strconv"
 	"time"

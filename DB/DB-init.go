@@ -1,13 +1,13 @@
 package DB
 
 import (
+	"MyGO-IM/Conf"
 	"context"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"log"
-	"mygoim/Conf"
 )
 
 var MySQL *gorm.DB

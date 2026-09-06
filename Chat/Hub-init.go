@@ -1,10 +1,10 @@
 package Chat
 
 import (
+	"MyGO-IM/DB"
 	"encoding/json"
 	"github.com/gorilla/websocket"
 	"log"
-	"mygoim/DB"
 	"time"
 )
 
@@ -93,7 +93,7 @@ func (c *Client) ReadPump() {
 			log.Println(err)
 			continue
 		}
-    
+
 		msg.FromName = c.Name
 		msg.FromID = c.ID
 		msg.Timestamp = time.Now().Unix()

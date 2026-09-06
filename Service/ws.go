@@ -1,9 +1,9 @@
 package Service
 
 import (
+	"MyGO-IM/Chat"
 	"github.com/gin-gonic/gin"
 	"log"
-	"mygoim/Chat"
 	"net/http"
 )
 

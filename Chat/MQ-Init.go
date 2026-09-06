@@ -1,9 +1,9 @@
 package Chat
 
 import (
+	"MyGO-IM/Conf"
 	"github.com/rabbitmq/amqp091-go"
 	"log"
-	"mygoim/Conf"
 )
 
 var Conn *amqp091.Connection

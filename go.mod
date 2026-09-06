@@ -1,4 +1,4 @@
-module mygoim
+module MyGO-IM
 
 go 1.26.3
 

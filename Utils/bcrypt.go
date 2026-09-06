@@ -1,9 +1,9 @@
 package Utils
 
 import (
+	"MyGO-IM/DB"
 	"golang.org/x/crypto/bcrypt"
 	"log"
-	"mygoim/DB"
 )
 
 func CreateHashPwd(password string) (hashPwd string, err error) {

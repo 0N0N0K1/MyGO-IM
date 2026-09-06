@@ -1,11 +1,11 @@
 package main
 
 import (
+	"MyGO-IM/API"
+	"MyGO-IM/Chat"
+	"MyGO-IM/Conf"
+	"MyGO-IM/DB"
 	"log"
-	"mygoim/API"
-	"mygoim/Chat"
-	"mygoim/Conf"
-	"mygoim/DB"
 )
 
 func main() {

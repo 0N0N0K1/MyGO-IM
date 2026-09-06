@@ -1,8 +1,8 @@
 package Chat
 
 import (
+	"MyGO-IM/DB"
 	"github.com/gorilla/websocket"
-	"mygoim/DB"
 )
 
 func InitChat(userName string, userID uint, conn *websocket.Conn) error {

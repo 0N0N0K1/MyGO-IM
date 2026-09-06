@@ -1,9 +1,9 @@
 package Chat
 
 import (
+	"MyGO-IM/Conf"
 	"github.com/gorilla/websocket"
 	"github.com/rabbitmq/amqp091-go"
-	"mygoim/Conf"
 	"net/http"
 	"sync"
 )

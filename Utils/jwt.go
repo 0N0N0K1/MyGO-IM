@@ -1,10 +1,10 @@
 package Utils
 
 import (
+	"MyGO-IM/Conf"
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"mygoim/Conf"
 	"time"
 )
 

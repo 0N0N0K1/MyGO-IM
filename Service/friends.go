@@ -1,8 +1,8 @@
 package Service
 
 import (
+	"MyGO-IM/DB"
 	"github.com/gin-gonic/gin"
-	"mygoim/DB"
 	"net/http"
 	"time"
 )

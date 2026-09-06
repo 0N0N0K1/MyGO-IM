@@ -1,11 +1,11 @@
 package Utils
 
 import (
+	"MyGO-IM/DB"
 	"context"
 	"fmt"
 	"gopkg.in/gomail.v2"
 	"math/rand"
-	"mygoim/DB"
 	"time"
 )
 
