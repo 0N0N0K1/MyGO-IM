@@ -8,6 +8,8 @@ import (
 	"log"
 )
 
+//todo 删除好友
+//todo 群组部分
 func main() {
 	Conf.LoadConfig()
 	DB.InitMySQL()

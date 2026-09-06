@@ -29,9 +29,9 @@ func VerifyJWT(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	c.Set("ID", user.ID)
+	c.Set("ID", user[0].ID)
 	c.Set("name", username)
-	if ban, reason, t := DB.QueryIfBan(strconv.Itoa(int(user.ID))); ban {
+	if ban, reason, t := DB.QueryIfBan(strconv.Itoa(int(user[0].ID))); ban {
 		c.JSON(http.StatusOK, gin.H{"code": "101", "msg": "Banned!!!", "reason": reason, "ban-time": t})
 		c.Abort()
 		return

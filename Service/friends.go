@@ -4,41 +4,96 @@ import (
 	"MyGO-IM/DB"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"time"
+	"strconv"
 )
 
+// GetFriends 提供 nickname, id, limit+page 三种query方式
 func GetFriends(c *gin.Context) {
 	userID, _ := c.Get("ID")
-	results := DB.QueryFrdAll(userID.(uint))
-	for index := range results {
-		if DB.CheckOnline(results[index].Name) {
-			results[index].Online = 1
-			results[index].LastOnline = new(time.Time)
-		}
-	}
-	c.JSON(http.StatusOK, gin.H{"code": "003", "msg": "successfully!", "friends": results})
-}
+	frdName := c.Query("nickname")
+	frdID := c.Query("id")
+	limit := c.Query("limit")
+	page := c.Query("page")
 
-func AddFriend(c *gin.Context) {
-	userID, _ := c.Get("ID")
-	frdName := c.Param("friendname")
-	frd, err := DB.QueryUser(frdName, DB.ByName)
-	//对方是否存在，是否为自己
-	if frd.ID == 0 || userID == frd.ID || err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": "102", "msg": "Illegal Addition!"})
+	if frdID != "" {
+		fID, err := strconv.Atoi(frdID)
+		if err != nil || fID <= 0 {
+			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "String2int error"})
+			return
+		}
+		frds, err := DB.QueryFrd(userID.(uint), fID, DB.ByID)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "type": "ByID", "friends": frds})
 		return
 	}
+	if frdName != "" {
+		frds, err := DB.QueryFrd(userID.(uint), frdName, DB.ByName)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ByName!", "friends": frds})
+		return
+	}
+	if limit != "" {
+		l, err := strconv.Atoi(limit)
+		if err != nil || l < 0 {
+			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "String2int error"})
+			return
+		}
+		if page == "" {
+			frds := DB.QueryFrdLimit(userID.(uint), 0, l)
+			c.JSON(http.StatusOK, gin.H{"code": 0, "type": "limit", "friends": frds})
+			return
+		}
+		p, err := strconv.Atoi(page)
+		if err != nil || p < 0 {
+			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "string2int error"})
+			return
+		}
+		frds := DB.QueryFrdLimit(userID.(uint), p, l)
+		c.JSON(http.StatusOK, gin.H{"code": 0, "type": "limit!", "friends": frds})
+		return
+	}
+	frds, err := DB.QueryFrd(userID.(uint), nil, DB.ALL)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "type": "ALL", "friends": frds})
+}
+
+// AddFriend 提供提供 query id 添加好友
+func AddFriend(c *gin.Context) {
+	userID, _ := c.Get("ID")
+	frdID := c.Query("id")
+	var frd []DB.User
+	var err error
+	fID, err := strconv.Atoi(frdID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "String2int error"})
+		return
+	}
+	frd, err = DB.QueryUser(fID, DB.ByID)
+	//对方是否存在，是否为自己
+	if frd[0].ID == 0 || userID == frd[0].ID || err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Illegal Addition!"})
+		return
+	}
+	result, _ := DB.QueryFrd(userID.(uint), frd[0].ID, DB.ByID)
 	//是否已添加
-	result := DB.QueryFrd(userID.(uint), frd.ID)
-	if result.Name != "" {
-		c.JSON(http.StatusOK, gin.H{"code": "102", "msg": "Repeated Addition!"})
+	if result[0].Name != "" {
+		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Repeated addition"})
 		return
 	}
 	//插入到中间表
-	err = DB.InsertFrd(userID.(uint), frd.ID)
+	err = DB.InsertFrd(userID.(uint), frd[0].ID)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": "102", "msg": "Try Again!"})
+		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": "002", "msg": "Successful Addition!"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
 }

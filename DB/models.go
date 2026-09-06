@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+const (
+	ByID = iota
+	ByEmail
+	ByName
+	ALL
+)
+
 type DetailInfo struct {
 	User
 	UserInfo

@@ -8,14 +8,14 @@ import (
 )
 
 func (c *Client) SendPrivate(msg Message) {
-	var frd DB.User
+	var frd []DB.User
 	// 判断是否为好友
 	userTo, _ := DB.QueryUser(msg.ToID, DB.ByID)
-	if userTo.ID != 0 {
-		frd = DB.QueryFrd(msg.FromID, userTo.ID)
+	if userTo[0].ID != 0 {
+		frd, _ = DB.QueryFrd(msg.FromID, userTo[0].ID, DB.ByID)
 	}
 	// 对方不是好友返回系统消息
-	if frd.ID == 0 {
+	if frd[0].ID == 0 {
 		c.Hub.mu.RLock()
 		target, ok := c.Hub.Clients[msg.FromName]
 		c.Hub.mu.RUnlock()

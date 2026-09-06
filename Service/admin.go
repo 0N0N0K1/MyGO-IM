@@ -55,7 +55,7 @@ func QueryMessage(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1001", "error": "Type can't search"})
 		return
 	}
-	var messages = make([]Chat.Message, 1, 1)
+	var messages = make([]Chat.Message, 1)
 	var message Chat.Message
 	for _, msg := range msgs {
 		_ = json.Unmarshal([]byte(msg.Content), &message)
@@ -84,8 +84,8 @@ func ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Update password error"})
 		return
 	}
-	user.Password = pwd
-	err = DB.UpdateUser(&user)
+	user[0].Password = pwd
+	err = DB.UpdateUser(&user[0])
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Update password error"})
 		return
@@ -110,7 +110,7 @@ func BanUser(c *gin.Context) {
 		return
 	}
 	user, err := DB.QueryUser(uint(id), DB.ByID)
-	if err != nil || user.ID == 0 {
+	if err != nil || user[0].ID == 0 {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Query user by ID error"})
 		return
 	}

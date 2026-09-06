@@ -17,7 +17,7 @@ func CreateHashPwd(password string) (hashPwd string, err error) {
 func VerifyPwd(userEmail, password string) (OK bool) {
 
 	user, _ := DB.QueryUser(userEmail, DB.ByEmail)
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	err := bcrypt.CompareHashAndPassword([]byte(user[0].Password), []byte(password))
 	if err != nil {
 		return false
 	}

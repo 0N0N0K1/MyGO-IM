@@ -47,7 +47,7 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "QueryUser: " + err.Error()})
 		return
 	}
-	if ban, reason, t := DB.QueryIfBan(strconv.Itoa(int(user.ID))); ban {
+	if ban, reason, t := DB.QueryIfBan(strconv.Itoa(int(user[0].ID))); ban {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "YOU ARE BANNED!!!", "reason": reason, "remain-time": t})
 		return
 	}
@@ -73,7 +73,7 @@ func Register(c *gin.Context) {
 		return
 	}
 	user, err := DB.QueryUser(postform.Email, DB.ByEmail)
-	if user.Name != "" {
+	if user[0].Name != "" {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "This email address is already registered"})
 		return
 	}
@@ -93,7 +93,7 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "QueryUser: " + err.Error()})
 		return
 	}
-	err = DB.InsertUserInfo(user.ID)
+	err = DB.InsertUserInfo(user[0].ID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "InsertUserInfo: " + err.Error()})
 		return
@@ -134,7 +134,7 @@ func AuthCode(c *gin.Context) {
 
 	case "register":
 		user, err := DB.QueryUser(postform.Email, DB.ByEmail)
-		if user.Name != "" || err != nil {
+		if user[0].Name != "" || err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 100, "error": "This email address is already registered"})
 			return
 		}

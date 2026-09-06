@@ -25,23 +25,17 @@ func UpdateUser(user *User) error {
 }
 
 // QueryUser 查询用户关键信息（by name/id）
-const (
-	ByID = iota
-	ByEmail
-	ByName
-)
-
-func QueryUser(input any, tag int) (User, error) {
-	var result User
-	switch tag {
-	case 0:
+func QueryUser(input any, option int) ([]User, error) {
+	var result []User
+	switch option {
+	case ByID:
 		MySQL.Table("users").Select("*").Where("id=?", input).First(&result)
-	case 1:
+	case ByEmail:
 		MySQL.Table("users").Select("*").Where("email=?", input).First(&result)
-	case 2:
-		MySQL.Table("users").Select("*").Where("name=?", input).First(&result)
+	case ByName:
+		MySQL.Table("users").Select("*").Where("name=?", input).Find(&result)
 	default:
-		return User{}, errors.New("input type error")
+		return []User{}, errors.New("option error")
 	}
 	return result, nil
 }
