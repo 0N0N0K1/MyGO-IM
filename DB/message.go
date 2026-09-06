@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-func InsertMsg(from, to uint, MsgType string, Content []byte) (err error) {
+func InsertMsg(from, to uint, fromname, toname, MsgType string, Content string) (err error) {
 	var msgs = PrivateMessage{
 		ToID:    to,
 		FromID:  from,

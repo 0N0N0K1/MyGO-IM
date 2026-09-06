@@ -5,6 +5,7 @@ import (
 	"mygoim/DB"
 	"mygoim/Utils"
 	"net/http"
+	"strconv"
 )
 
 func Login(c *gin.Context) {
@@ -20,6 +21,15 @@ func Login(c *gin.Context) {
 	token := postform.CreateJWT()
 	if token == "" {
 		c.JSON(http.StatusOK, gin.H{"code": "100", "msg": "Try again3!"})
+		return
+	}
+	user, err := DB.QueryUser(postform.Username)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": "100", "msg": "Try again3!"})
+		return
+	}
+	if ban, reason := DB.QueryIfBan(strconv.Itoa(int(user.ID))); ban {
+		c.JSON(http.StatusOK, gin.H{"code": "100", "msg": "Banned!!!", "reason": reason})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": "001", "msg": "Login successfully!", "token": token})

@@ -10,9 +10,10 @@ import (
 
 type Message struct {
 	Type      string `json:"type"` // 消息类型 "private" | "system" | "group"
-	From      string `json:"from"`
-	ID        uint   `json:"id"` // 发送者ID
-	To        string `json:"to"`
+	FromName  string `json:"from_name"`
+	FromID    uint   `json:"form_id"` // 发送者ID
+	ToName    string `json:"to_name"`
+	ToID      uint   `json:"to_id"`
 	Content   string `json:"content"`
 	Timestamp int64  `json:"timestamp"` // 发送时间戳
 }

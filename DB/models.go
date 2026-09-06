@@ -5,12 +5,17 @@ import (
 	"time"
 )
 
+type DetailInfo struct {
+	User
+	UserInfo
+}
 type User struct {
-	ID         uint      `gorm:"primaryKey"`
-	Name       string    `gorm:"size:64;not null"`
-	Online     int       `gorm:"-"`
-	LastOnline time.Time `gorm:"default:CURRENT_TIMESTAMP"`
-	Password   string    `gorm:"size:255;not null" json:"password,omitempty"`
+	ID         uint   `gorm:"primaryKey"`
+	Name       string `gorm:"size:64;not null"`
+	Online     int    `gorm:"-"`
+	LastOnline *time.Time
+	DeletedAt  gorm.DeletedAt `gorm:"index"`
+	Password   string         `gorm:"size:255;not null" json:"password,omitempty"`
 }
 
 type UserInfo struct {
@@ -18,11 +23,10 @@ type UserInfo struct {
 	Addr      string `gorm:"size:255"`
 	Email     string `gorm:"size:128"`
 	Age       int
-	Gender    string         `gorm:"size:10"`
-	Signature string         `gorm:"size:255"`
-	CreatedAt time.Time      `gorm:"autoCreateTime"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	Gender    string    `gorm:"size:10"`
+	Signature string    `gorm:"size:255"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 
 	User *User `gorm:"foreignKey:UserID;references:ID"`
 }
@@ -58,19 +62,23 @@ type GroupUser struct {
 	User  *User  `gorm:"foreignKey:UserID;references:ID" json:"-"`
 }
 type GroupMessage struct {
-	ID      uint `gorm:"primaryKey"`
-	ToID    uint
-	FromID  uint
-	Content []byte
+	ID       uint `gorm:"primaryKey"`
+	ToID     uint
+	FromID   uint
+	FromName string
+	ToName   string
+	Content  string `gorm:"type:text"`
 
 	To   *Group `gorm:"foreignKey:ToID;references:ID"  json:"-"`
 	From *User  `gorm:"foreignKey:FromID;references:ID"  json:"-"`
 }
 type PrivateMessage struct {
-	ID      uint `gorm:"primaryKey"`
-	ToID    uint
-	FromID  uint
-	Content []byte
+	ID       uint `gorm:"primaryKey"`
+	ToID     uint
+	FromID   uint
+	FromName string
+	ToName   string
+	Content  string `gorm:"type:text"`
 
 	To   *User `gorm:"foreignKey:ToID;references:ID" json:"-"`
 	From *User `gorm:"foreignKey:FromID;references:ID" json:"-"`

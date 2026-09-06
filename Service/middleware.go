@@ -5,6 +5,7 @@ import (
 	"mygoim/DB"
 	"mygoim/Utils"
 	"net/http"
+	"strconv"
 )
 
 func VerifyJWT(c *gin.Context) {
@@ -25,5 +26,10 @@ func VerifyJWT(c *gin.Context) {
 	}
 	c.Set("ID", user.ID)
 	c.Set("name", username)
+	if ban, reason := DB.QueryIfBan(strconv.Itoa(int(user.ID))); ban {
+		c.JSON(http.StatusOK, gin.H{"code": "101", "msg": "Banned!!!", "reason": reason})
+		c.Abort()
+		return
+	}
 	c.Next()
 }

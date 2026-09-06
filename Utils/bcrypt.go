@@ -16,7 +16,7 @@ func (f *LoginForm) CreateHashPwd() (hashPwd string, err error) {
 }
 func (f *LoginForm) VerifyPwd() (OK bool) {
 
-	user := DB.QueryPwd(f.Username)
+	user, _ := DB.QueryUser(f.Username)
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(f.Password))
 	if err != nil {
 		return false

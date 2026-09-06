@@ -13,7 +13,7 @@ func GetFriends(c *gin.Context) {
 	for index := range results {
 		if DB.CheckOnline(results[index].Name) {
 			results[index].Online = 1
-			results[index].LastOnline = *new(time.Time)
+			results[index].LastOnline = new(time.Time)
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"code": "003", "msg": "successfully!", "friends": results})

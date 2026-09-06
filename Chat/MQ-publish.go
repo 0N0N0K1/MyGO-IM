@@ -8,7 +8,7 @@ import (
 
 func (c *Client) PublishPrivate(msg Message) error {
 	data, _ := json.Marshal(msg)
-	err := c.MQCh.Publish("private", msg.To, false, false,
+	err := c.MQCh.Publish("private", msg.ToName, false, false,
 		amqp091.Publishing{
 			Body: []byte(data),
 		})
@@ -19,7 +19,7 @@ func (c *Client) PublishPrivate(msg Message) error {
 }
 func (c *Client) PublishGroup(msg Message) error {
 	data, _ := json.Marshal(msg)
-	err := c.MQCh.Publish("group", msg.To, false, false,
+	err := c.MQCh.Publish("group", msg.ToName, false, false,
 		amqp091.Publishing{
 			Body: data,
 		})

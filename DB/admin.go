@@ -3,9 +3,11 @@ package DB
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 )
 
+// InsertUser 插入用户/注册
 func InsertUser(name string, pwd string) error {
 	var user = User{
 		Name:     name,
@@ -13,8 +15,15 @@ func InsertUser(name string, pwd string) error {
 	}
 	err := MySQL.Table("users").Create(&user).Error
 	return err
-
 }
+
+// UpdateUser 用于更新用户信息
+func UpdateUser(user *User) error {
+	err := MySQL.Table("users").Select("*").Where("id=?", user.ID).Updates(user).Error
+	return err
+}
+
+// QueryUser 查询用户关键信息（by name/id）
 func QueryUser(input any) (User, error) {
 	var result User
 	switch input.(type) {
@@ -27,10 +36,19 @@ func QueryUser(input any) (User, error) {
 	}
 	return result, nil
 }
-func QueryPwd(input string) User {
-	var result User
-	MySQL.Table("users").Select("password").Where("name=?", input).First(&result)
-	return result
+
+// QueryUserWithInfo 查询用户关键与详细信息（by name/id）
+func QueryUserWithInfo(input any) (DetailInfo, error) {
+	var result DetailInfo
+	switch input.(type) {
+	case uint:
+		MySQL.Raw("select * from users a,user_infos b where a.id=b.user_id and a.id =?", input).First(&result)
+	case string:
+		MySQL.Raw("select * from users a,user_infos b where a.id=b.user_id and a.name =?", input).First(&result)
+	default:
+		return DetailInfo{}, errors.New("input type error")
+	}
+	return result, nil
 }
 
 // UserNum 返回已注册用户总数
@@ -62,4 +80,26 @@ func GetFresherToday() uint {
 	end := start.AddDate(0, 0, 1)
 	MySQL.Table("user_infos").Select("count(*)").Where("created_at between ? and ?", start, end).Find(&num)
 	return num
+}
+
+// BanUserHelper 用于永久或者暂时禁言用户
+func BanUserHelper(userID uint, t int, reason string) error {
+	if t <= 0 {
+		err := MySQL.Table("users").Where("id=?", userID).Delete(&User{}).Error
+		return err
+	}
+	err := RDB.SetNX(context.TODO(), strconv.Itoa(int(userID)), reason, time.Hour*time.Duration(t)).Err()
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func QueryIfBan(userID string) (ban bool, reason string) {
+	cmd := RDB.Get(context.TODO(), userID)
+	if cmd.Err() != nil {
+		return false, ""
+	}
+	s := cmd.String()
+	return true, s
 }

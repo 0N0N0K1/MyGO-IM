@@ -41,11 +41,14 @@ func InitRouters() {
 
 	{
 		Admin.GET("/chat", Service.WSUpgrade)
-		Admin.GET("/mywebinfo", Service.GetBasicInfo)
+		Admin.GET("/basicinfo", Service.GetBasicInfo)
 		Admin.GET("/message", Service.QueryMessage)
-		//Admin.POST("/password", Service.ChangePassword)
-		//Admin.POST("/ban", Service.BanUser)
-		//Admin.GET("/userinfo", Service.QueryUser)
-	}
 
+		UserManamge := Admin.Group("/users")
+		{
+			UserManamge.GET("/password", Service.ChangePassword)
+			UserManamge.GET("/ban", Service.BanUser)
+			UserManamge.GET("/info", Service.QueryUser)
+		}
+	}
 }
