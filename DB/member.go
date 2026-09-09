@@ -10,31 +10,25 @@ func InsertMember(memberID, groupID uint) (err error) {
 	return err
 }
 
-func QueryMemberAll(groupName string) []User {
+func QueryMemberAll(groupID uint) []User {
 	var result []User
 
-	groupID := QueryGroupID(groupName).ID
 	if groupID == 0 {
 		return result
 	}
 	MySQL.
-		Raw("select a.name, a.id from users a,`groups` b,group_users c where c.break=0 and b.id=? and b.id=c.group_id and a.id=c.user_id ",
+		Raw("select a.name, a.id from users a,`groups` b,group_users c where  b.id=? and b.id=c.group_id and a.id=c.user_id ",
 			groupID).
 		Find(&result)
 	return result
 }
 
-func QueryMember(userName, groupName string) User {
+func QueryMember(userID, groupID uint) User {
 	var result User
-
-	groupID := QueryGroupID(groupName).ID
-	if groupID == 0 {
-		return result
-	}
 	MySQL.
-		Raw("select a.name, a.id from users a,group_users c where c.break=0 and c.group_id=? and a.id=c.user_id and a.name=?",
-			groupID, userName).
-		Find(&result)
+		Raw("select a.name, a.id from users a,group_users c where c.group_id=? and a.id=c.user_id and a.id=?",
+			groupID, userID).
+		First(&result)
 	return result
 }
 

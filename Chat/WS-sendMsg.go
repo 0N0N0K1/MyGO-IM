@@ -58,7 +58,7 @@ func (c *Client) SendPrivate(msg Message) {
 
 func (c *Client) SendGroup(msg Message) {
 	// 判断发送者是否为群成员
-	if DB.QueryMember(msg.FromName, msg.ToName).ID == 0 {
+	if DB.QueryMember(msg.FromID, msg.ToID).ID == 0 {
 		c.Hub.mu.RLock()
 		target, ok := c.Hub.Clients[msg.FromName]
 		c.Hub.mu.RUnlock()

@@ -81,8 +81,17 @@ func EnterGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Enter Group successfully"})
 }
 func GetMembers(c *gin.Context) {
-	groupName := c.Query("groupname")
-	result := DB.QueryMemberAll(groupName)
+	gID := c.Param("gID")
+	if gID == "" {
+		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "No groupID input"})
+		return
+	}
+	groupID, err := strconv.Atoi(gID)
+	if err != nil || groupID <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "String2int error"})
+		return
+	}
+	result := DB.QueryMemberAll(uint(groupID))
 	c.JSON(http.StatusOK, gin.H{"code": "005", "msg": "Successful!", "members": result})
 }
 
