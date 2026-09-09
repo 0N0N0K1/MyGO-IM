@@ -1,57 +1,61 @@
 package API
 
 import (
-	"MyGO-IM/Service"
+	"MyGO-IM/Service/MyGOHTTP"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-var UserEngine *gin.Engine
+var ServiceEngine *gin.Engine
 var AdminEngine *gin.Engine
 
 func InitRouters() {
 
-	UserEngine = gin.Default()
+	ServiceEngine = gin.Default()
 	AdminEngine = gin.Default()
 
-	UserEngine.POST("/login", Service.Login)
-	UserEngine.POST("/register", Service.Register)
-	UserEngine.POST("/send-code", Service.AuthCode)
+	ServiceEngine.POST("/login", MyGOHTTP.Login)
+	ServiceEngine.POST("/register", MyGOHTTP.Register)
+	ServiceEngine.POST("/send-code", MyGOHTTP.AuthCode)
 
 	// 用户组 API
-	User := UserEngine.Group("/users/:ID")
-	User.Use(Service.VerifyJWT)
+	Users := ServiceEngine.Group("/users/:ID")
+	Users.Use(MyGOHTTP.VerifyJWT)
 	{
 		// 通过 Query 传ID增删查
-		User.GET("/friends", Service.GetFriends)
-		User.POST("/friends", Service.AddFriend)
-		User.DELETE("/friends", Service.DeleteFriend)
+		Users.GET("/friends", MyGOHTTP.GetFriends)
+		Users.POST("/friends", MyGOHTTP.AddFriend)
+		Users.DELETE("/friends", MyGOHTTP.DeleteFriend)
 
-		//todo 加好友申请与同意拒绝
-
-		User.GET("/chat", Service.WSUpgrade)
+		Users.GET("/chat", MyGOHTTP.WSUpgrade)
 
 		//  test API
-		User.GET("/hello", func(c *gin.Context) {
+		Users.GET("/hello", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": "999", "msg": "Hello!"})
 		})
 
 		// 群组 API
-		Group := User.Group("/groups")
+		Groups := Users.Group("/groups")
 		{
 
-			//todo 群主不能退群，群主转让功能，进/退群申请与同意拒绝，群主禁言与踢人功能
+			Groups.POST("/", MyGOHTTP.CreateGroup)
 
-			// 创建/销毁
-			Group.DELETE("/:gID", Service.DropMyGroup)
-			Group.POST("/", Service.CreateGroup)
+			//todo 群主转让功能，群主禁言与踢人功能
 
-			// 进入/退出
-			Group.DELETE("/:gID/members", Service.ExitGroup)
-			Group.POST("/:gID/members", Service.EnterGroup)
+			// 创建
+			GroupsWithMW := Groups.Group("/:gID")
+			GroupsWithMW.Use(MyGOHTTP.GroupMiddlewarw)
+			{
+				// 销毁
+				GroupsWithMW.DELETE("/", MyGOHTTP.DropMyGroup)
+				// 进入/退出
+				GroupsWithMW.DELETE("/members", MyGOHTTP.ExitGroup)
+				GroupsWithMW.POST("/members", MyGOHTTP.EnterGroup)
 
-			// 成员查看
-			Group.GET("/:gID/members", Service.GetMembers)
+				//todo 优化群成员查询函数
+				// 成员查看
+				GroupsWithMW.GET("/:gID/members", MyGOHTTP.GetMembers)
+			}
 		}
 	}
 
@@ -59,15 +63,15 @@ func InitRouters() {
 	Admin := AdminEngine.Group("/admin")
 
 	{
-		Admin.GET("/chat", Service.WSUpgrade)
-		Admin.GET("/basicinfo", Service.GetBasicInfo)
-		Admin.GET("/message", Service.QueryMessage)
+		Admin.GET("/chat", MyGOHTTP.WSUpgrade)
+		Admin.GET("/basicinfo", MyGOHTTP.GetBasicInfo)
+		Admin.GET("/message", MyGOHTTP.QueryMessage)
 		// 用户管理API
 		UserManamge := Admin.Group("/users")
 		{
-			UserManamge.GET("/password", Service.ChangePassword)
-			UserManamge.GET("/ban", Service.BanUser)
-			UserManamge.GET("/info", Service.QueryUser)
+			UserManamge.GET("/password", MyGOHTTP.ChangePassword)
+			UserManamge.GET("/ban", MyGOHTTP.BanUser)
+			UserManamge.GET("/info", MyGOHTTP.QueryUser)
 		}
 	}
 }

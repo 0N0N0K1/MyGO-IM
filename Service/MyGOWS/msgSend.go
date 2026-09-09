@@ -1,25 +1,24 @@
-package Chat
+package MyGOWS
 
 import (
 	"MyGO-IM/DB"
 	"encoding/json"
 	"log"
-	"time"
 )
 
 func (c *Client) SendPrivate(msg Message) {
 	var frd []DB.User
 	// 判断是否为好友
 	userTo, _ := DB.QueryUser(msg.ToID, DB.ByID)
-	if userTo[0].ID != 0 {
+	if len(userTo) != 0 {
 		frd, _ = DB.QueryFrd(msg.FromID, userTo[0].ID, DB.ByID)
 	}
 	// 对方不是好友返回系统消息
-	if frd[0].ID == 0 {
+	if len(frd) == 0 {
 		c.Hub.mu.RLock()
 		target, ok := c.Hub.Clients[msg.FromName]
 		c.Hub.mu.RUnlock()
-		data, _ := json.Marshal(NewSystemMsg("对方不是你的好友", msg.FromName, msg.FromID))
+		data, _ := json.Marshal(NewSystemMsg("对方不是你的好友", "system", msg.FromName, 0, msg.FromID))
 		if ok {
 			select {
 			case target.Send <- data:
@@ -37,7 +36,7 @@ func (c *Client) SendPrivate(msg Message) {
 		c.Hub.mu.RLock()
 		target, ok := c.Hub.Clients[msg.FromName]
 		c.Hub.mu.RUnlock()
-		data, _ := json.Marshal(NewSystemMsg("发送失败", msg.FromName, msg.FromID))
+		data, _ := json.Marshal(NewSystemMsg("发送失败", "system", msg.FromName, 0, msg.FromID))
 		if ok {
 			select {
 			case target.Send <- data:
@@ -62,7 +61,7 @@ func (c *Client) SendGroup(msg Message) {
 		c.Hub.mu.RLock()
 		target, ok := c.Hub.Clients[msg.FromName]
 		c.Hub.mu.RUnlock()
-		data, _ := json.Marshal(NewSystemMsg("你不是该群成员", msg.FromName, msg.FromID))
+		data, _ := json.Marshal(NewSystemMsg("你不是该群成员", "system", msg.FromName, 0, msg.FromID))
 		if ok {
 			select {
 			case target.Send <- data:
@@ -79,7 +78,7 @@ func (c *Client) SendGroup(msg Message) {
 		c.Hub.mu.RLock()
 		target, ok := c.Hub.Clients[msg.FromName]
 		c.Hub.mu.RUnlock()
-		data, _ := json.Marshal(NewSystemMsg("发送失败", msg.FromName, msg.FromID))
+		data, _ := json.Marshal(NewSystemMsg("发送失败", "system", msg.FromName, 0, msg.FromID))
 		if ok {
 			select {
 			case target.Send <- data:
@@ -95,17 +94,5 @@ func (c *Client) SendGroup(msg Message) {
 	if err != nil {
 		//todo 持久化失败原因及处理
 		return
-	}
-}
-
-func NewSystemMsg(content, toname string, toid uint) *Message {
-	return &Message{
-		Type:      "system",
-		FromName:  "system",
-		FromID:    0,
-		ToID:      toid,
-		ToName:    toname,
-		Content:   content,
-		Timestamp: time.Now().Unix(),
 	}
 }

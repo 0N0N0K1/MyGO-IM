@@ -11,6 +11,11 @@ func InsertGroup(ownerID uint, ownerName, groupName string) error {
 	return err
 }
 
+func QueryGroup(groupID uint) Group {
+	var result Group
+	MySQL.Table("groups").Where("id=?", groupID).First(&result)
+	return result
+}
 func QueryMyGroup(input uint) []Group {
 	var result []Group
 	MySQL.

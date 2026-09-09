@@ -1,13 +1,26 @@
 package DB
 
-// InsertMember 插入成员表记录
-func InsertMember(memberID, groupID uint) (err error) {
+import "errors"
+
+// UpdateGrpStatus 插入成员表记录
+func UpdateGrpStatus(memberID, groupID uint, status string) (err error) {
 	var member = GroupUser{
 		GroupID: groupID,
 		UserID:  memberID,
+		Status:  status,
 	}
-	err = MySQL.Table("group_users").Create(&member).Error
-	return err
+	switch status {
+	case "pending":
+		err = MySQL.Table("group_users").Create(&member).Error
+		return err
+	case "reject":
+		err = MySQL.Table("group_users").Where("group_id=? and user_id=?", memberID, groupID).Delete(&GroupUser{}).Error
+		return err
+	case "accept":
+		err = MySQL.Table("group_users").Updates(&member).Error
+		return err
+	}
+	return errors.New("no this status")
 }
 
 func QueryMemberAll(groupID uint) []User {
@@ -26,7 +39,7 @@ func QueryMemberAll(groupID uint) []User {
 func QueryMember(userID, groupID uint) User {
 	var result User
 	MySQL.
-		Raw("select a.name, a.id from users a,group_users c where c.group_id=? and a.id=c.user_id and a.id=?",
+		Raw("select a.name, a.id from users a,group_users c where c.status='accept' and c.group_id=? and a.id=c.user_id and a.id=?",
 			groupID, userID).
 		First(&result)
 	return result

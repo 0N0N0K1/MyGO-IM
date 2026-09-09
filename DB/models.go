@@ -27,7 +27,7 @@ type User struct {
 }
 
 type UserInfo struct {
-	UserID    uint   `gorm:"primaryKey"` // 关联到 User.ID
+	UserID    uint   `gorm:"primaryKey"`
 	Addr      string `gorm:"size:255"`
 	Age       int
 	Gender    string    `gorm:"size:10"`
@@ -39,10 +39,12 @@ type UserInfo struct {
 }
 
 type Group struct {
-	gorm.Model
-	GroupName string `gorm:"size:100;not null"`
-	OwnerID   uint   `gorm:"primaryKey;comment:群主ID"`
-	OwnerName string `gorm:"size:100;not null"`
+	ID        uint      `gorm:"primarykey"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime"`
+	GroupName string    `gorm:"size:100;not null"`
+	OwnerID   uint      `gorm:"primaryKey;comment:群主ID"`
+	OwnerName string    `gorm:"size:100;not null"`
 
 	Owner *User `gorm:"foreignKey:OwnerID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
@@ -52,9 +54,9 @@ type UserUser struct {
 	PassiveID uint      `gorm:"primaryKey;comment:被动添加方"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
-
-	Active  *User `gorm:"foreignKey:ActiveID;references:ID;constraint:OnDelete:CASCADE"`
-	Passive *User `gorm:"foreignKey:PassiveID;references:ID;constraint:OnDelete:CASCADE"`
+	Status    string    `gorm:""` // apply | reject | accept
+	Active    *User     `gorm:"foreignKey:ActiveID;references:ID;constraint:OnDelete:CASCADE"`
+	Passive   *User     `gorm:"foreignKey:PassiveID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 type GroupUser struct {
@@ -62,9 +64,9 @@ type GroupUser struct {
 	UserID    uint      `gorm:"primaryKey"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
-
-	Group *Group `gorm:"foreignKey:GroupID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
-	User  *User  `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	Status    string    `gorm:""` // apply | reject | accept
+	Group     *Group    `gorm:"foreignKey:GroupID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	User      *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 type GroupMessage struct {
 	ID       uint `gorm:"primaryKey"`

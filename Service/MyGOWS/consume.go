@@ -1,4 +1,4 @@
-package Chat
+package MyGOWS
 
 import (
 	"github.com/rabbitmq/amqp091-go"

@@ -1,4 +1,4 @@
-package Chat
+package MyGOWS
 
 import (
 	"encoding/json"
@@ -27,5 +27,17 @@ func (c *Client) PublishGroup(msg Message) error {
 		return err
 	}
 	fmt.Println("publish成功")
+	return nil
+}
+
+func (s *SystemMQChan) PublishSystem(msg *Message) error {
+	data, _ := json.Marshal(msg)
+	err := s.MQCh.Publish("system", msg.ToName, false, false,
+		amqp091.Publishing{
+			Body: data,
+		})
+	if err != nil {
+		return err
+	}
 	return nil
 }

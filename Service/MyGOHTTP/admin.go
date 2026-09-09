@@ -1,7 +1,7 @@
-package Service
+package MyGOHTTP
 
 import (
-	"MyGO-IM/Chat"
+	"MyGO-IM/Service/MyGOWS"
 	"MyGO-IM/Utils"
 	"context"
 	"encoding/json"
@@ -55,8 +55,8 @@ func QueryMessage(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1001", "error": "Type can't search"})
 		return
 	}
-	var messages = make([]Chat.Message, 1)
-	var message Chat.Message
+	var messages = make([]MyGOWS.Message, 1)
+	var message MyGOWS.Message
 	for _, msg := range msgs {
 		_ = json.Unmarshal([]byte(msg.Content), &message)
 		messages = append(messages, message)

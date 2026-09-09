@@ -1,7 +1,8 @@
-package Service
+package MyGOHTTP
 
 import (
 	"MyGO-IM/DB"
+	"MyGO-IM/Service/MyGOWS"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -9,7 +10,7 @@ import (
 
 // GetFriends 好友查询的处理函数，提供通过 nickname, id, limit+page 三种query方式
 func GetFriends(c *gin.Context) {
-	userID, _ := c.Get("ID")
+	userID, _ := c.Get("actorID")
 	frdName := c.Query("nickname")
 	frdID := c.Query("id")
 	limit := c.Query("limit")
@@ -68,8 +69,10 @@ func GetFriends(c *gin.Context) {
 
 // AddFriend 添加好友的处理函数，提供通过 query id 添加好友
 func AddFriend(c *gin.Context) {
-	userID, _ := c.Get("ID")
+	actorID, _ := c.Get("actorID")
+	actorName, _ := c.Get("actorName")
 	frdID := c.Query("id")
+	status := c.Query("status")
 	var frd []DB.User
 	var err error
 	fID, err := strconv.Atoi(frdID)
@@ -79,28 +82,52 @@ func AddFriend(c *gin.Context) {
 	}
 	frd, err = DB.QueryUser(fID, DB.ByID)
 	//对方是否存在，是否为自己
-	if len(frd) == 0 || userID == frd[0].ID || err != nil {
+	if len(frd) == 0 || actorID == frd[0].ID || err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Illegal Addition!"})
 		return
 	}
-	result, _ := DB.QueryFrd(userID.(uint), frd[0].ID, DB.ByID)
+	result, _ := DB.QueryFrd(actorID.(uint), frd[0].ID, DB.ByID)
 	//是否已添加
 	if len(result) != 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Repeated addition"})
 		return
 	}
-	//插入到中间表
-	err = DB.InsertFrd(userID.(uint), frd[0].ID)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
+
+	switch status {
+	case "pending": //待处理
+
+		err = DB.UpdateFrdStatus(actorID.(uint), frd[0].ID, "pending")
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
+			return
+		}
+		MyGOWS.SendFrdStatus(status, actorName.(string), frd[0].Name, actorID.(uint), uint(fID))
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
+	case "reject": //拒绝
+		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(uint), "reject")
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
+			return
+		}
+		MyGOWS.SendFrdStatus(status, actorName.(string), frd[0].Name, actorID.(uint), uint(fID))
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
+	case "accept": //接受
+		MyGOWS.SendFrdStatus(status, actorName.(string), frd[0].Name, actorID.(uint), uint(fID))
+		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(uint), "accept")
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
+	default:
+		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Input status error"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
 }
 
 // DeleteFriend 删除好友的处理函数，通过query id 删除
 func DeleteFriend(c *gin.Context) {
-	userID, _ := c.Get("ID")
+	actorID, _ := c.Get("actorID")
 	frdID := c.Query("id")
 	var err error
 	fID, err := strconv.Atoi(frdID)
@@ -108,14 +135,14 @@ func DeleteFriend(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "String2int error"})
 		return
 	}
-	frd, err := DB.QueryFrd(userID.(uint), fID, DB.ByID)
+	frd, err := DB.QueryFrd(actorID.(uint), fID, DB.ByID)
 	//是否已添加
-	if len(frd) == 0 || userID == fID || err != nil {
+	if len(frd) == 0 || actorID.(uint) == uint(fID) || err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Illegal delete"})
 		return
 	}
 	//插入到中间表
-	err = DB.DeleteFrd(userID.(uint), uint(fID))
+	err = DB.DeleteFrd(actorID.(uint), uint(fID))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "DeleteFrd: " + err.Error()})
 		return

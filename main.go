@@ -2,9 +2,9 @@ package main
 
 import (
 	"MyGO-IM/API"
-	"MyGO-IM/Chat"
 	"MyGO-IM/Conf"
 	"MyGO-IM/DB"
+	WS2 "MyGO-IM/Service/MyGOWS"
 	"log"
 )
 
@@ -13,11 +13,11 @@ func main() {
 	Conf.LoadConfig()
 	DB.InitMySQL()
 	DB.InitRedis()
-	Chat.InitHub()
-	Chat.InitMQ()
+	WS2.InitHub()
+	WS2.InitMQ()
 	API.InitRouters()
 	go func() {
-		err := API.UserEngine.Run(Conf.UserAddr)
+		err := API.ServiceEngine.Run(Conf.UserAddr)
 		if err != nil {
 			log.Fatal("Engine.Run: ", err)
 		}

@@ -1,7 +1,7 @@
-package Service
+package MyGOHTTP
 
 import (
-	"MyGO-IM/Chat"
+	"MyGO-IM/Service/MyGOWS"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -9,18 +9,18 @@ import (
 
 func WSUpgrade(c *gin.Context) {
 	//升级HTTP为WS
-	conn, err := Chat.Upgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := MyGOWS.Upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println(err)
 		c.JSON(http.StatusOK, gin.H{"code": "102", "msg": "WS UP ERROR!"})
 		c.Abort()
 		return
 	}
-	userID, _ := c.Get("ID")
-	userName, _ := c.Get("name")
+	actorID, _ := c.Get("actorID")
+	actorName, _ := c.Get("actorName")
 
 	//初始化聊天
-	if err = Chat.InitChat(userName.(string), userID.(uint), conn); err != nil {
+	if err = MyGOWS.InitChat(actorName.(string), actorID.(uint), conn); err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "102", "msg": "TRY AGAIN!"})
 		c.Abort()
 		return

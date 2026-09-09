@@ -1,4 +1,4 @@
-package Chat
+package MyGOWS
 
 import (
 	"MyGO-IM/Conf"

@@ -1,4 +1,4 @@
-package Service
+package MyGOHTTP
 
 import (
 	"MyGO-IM/DB"

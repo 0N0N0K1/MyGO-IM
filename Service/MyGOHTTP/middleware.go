@@ -1,4 +1,4 @@
-package Service
+package MyGOHTTP
 
 import (
 	"MyGO-IM/DB"
@@ -40,8 +40,28 @@ func VerifyJWT(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	c.Set("ID", uint(uid))
-	c.Set("nickname", users[0].Name)
+	c.Set("actorID", uint(uid))
+	c.Set("actorName", users[0].Name)
 
+	c.Next()
+}
+func GroupMiddlewarw(c *gin.Context) {
+	gID := c.Param("gID")
+	if gID == "" {
+		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "No groupID input"})
+		c.Abort()
+		return
+	}
+	groupID, err := strconv.Atoi(gID)
+	if err != nil || groupID <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "String2int error"})
+		c.Abort()
+		return
+	}
+	group := DB.QueryGroup(uint(groupID))
+	c.Set("gID", group.ID)
+	c.Set("gName", group.GroupName)
+	c.Set("ownerName", group.OwnerName)
+	c.Set("ownerID", group.OwnerID)
 	c.Next()
 }
