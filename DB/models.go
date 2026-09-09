@@ -41,7 +41,7 @@ type UserInfo struct {
 type Group struct {
 	gorm.Model
 	GroupName string `gorm:"size:100;not null"`
-	OwnerID   uint   `gorm:"not null;comment:群主ID"`
+	OwnerID   uint   `gorm:"primaryKey;comment:群主ID"`
 	OwnerName string `gorm:"size:100;not null"`
 
 	Owner *User `gorm:"foreignKey:OwnerID;references:ID;constraint:OnDelete:CASCADE" json:"-"`

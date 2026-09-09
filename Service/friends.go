@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-// GetFriends 提供 nickname, id, limit+page 三种query方式
+// GetFriends 好友查询的处理函数，提供通过 nickname, id, limit+page 三种query方式
 func GetFriends(c *gin.Context) {
 	userID, _ := c.Get("ID")
 	frdName := c.Query("nickname")
@@ -66,7 +66,7 @@ func GetFriends(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "type": "ALL", "friends": frds})
 }
 
-// AddFriend 提供提供 query id 添加好友
+// AddFriend 添加好友的处理函数，提供通过 query id 添加好友
 func AddFriend(c *gin.Context) {
 	userID, _ := c.Get("ID")
 	frdID := c.Query("id")
@@ -98,7 +98,7 @@ func AddFriend(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
 }
 
-// DeleteFriend 删除好友
+// DeleteFriend 删除好友的处理函数，通过query id 删除
 func DeleteFriend(c *gin.Context) {
 	userID, _ := c.Get("ID")
 	frdID := c.Query("id")

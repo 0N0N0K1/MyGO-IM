@@ -1,20 +1,12 @@
 package DB
 
-import "errors"
-
-func InsertMember(memberID uint, groupName string) (err error) {
-	groupID := QueryGroupID(groupName).ID
-	if groupID == 0 {
-		err = errors.New("NOT EXIST")
-
-	} else {
-		var member = GroupUser{
-			GroupID: groupID,
-			UserID:  memberID,
-		}
-		err = MySQL.Table("group_users").Create(&member).Error
+// InsertMember 插入成员表记录
+func InsertMember(memberID, groupID uint) (err error) {
+	var member = GroupUser{
+		GroupID: groupID,
+		UserID:  memberID,
 	}
-
+	err = MySQL.Table("group_users").Create(&member).Error
 	return err
 }
 
@@ -44,4 +36,9 @@ func QueryMember(userName, groupName string) User {
 			groupID, userName).
 		Find(&result)
 	return result
+}
+
+// NoMemberAnymore 删除成员表记录
+func NoMemberAnymore(memberID, groupID uint) error {
+	return MySQL.Table("group_users").Where("group_id=? and user_id=?", groupID, memberID).Delete(&GroupUser{}).Error
 }

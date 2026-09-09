@@ -17,7 +17,7 @@ func VerifyJWT(c *gin.Context) {
 	var JWTRecv JWToken
 	JWTRecv.Token = c.GetHeader("JWT")
 	userID, ok := Utils.VerifyJWT(JWTRecv.Token)
-	nameParam := c.Param("name")
+	id := c.Param("ID")
 	uid, err := strconv.Atoi(userID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "Int2string: " + err.Error()})
@@ -28,17 +28,18 @@ func VerifyJWT(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "QueryUser: " + err.Error()})
 		return
 	}
-	if !ok || nameParam != users[0].Name {
+	if !ok || id != userID {
 		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "NO Auth!"})
 		c.Abort()
 		return
 	}
-	c.Set("ID", uint(uid))
-	c.Set("nickname", nameParam)
 	if ban, reason, t := DB.QueryIfBan(userID); ban {
 		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "Banned!!!", "reason": reason, "ban-time": t})
 		c.Abort()
 		return
 	}
+	c.Set("ID", uint(uid))
+	c.Set("nickname", users[0].Name)
+
 	c.Next()
 }
