@@ -35,8 +35,8 @@ func Login(c *gin.Context) {
 		return
 	}
 	user, err := DB.QueryUser(postform.Email, DB.ByEmail)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "QueryUser: " + err.Error()})
+	if err != nil || len(user) == 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "QueryUser ERROR"})
 		return
 	}
 	if !Utils.VerifyPwd(user[0].Password, postform.Password) {

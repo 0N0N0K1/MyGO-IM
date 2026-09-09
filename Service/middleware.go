@@ -20,12 +20,14 @@ func VerifyJWT(c *gin.Context) {
 	id := c.Param("ID")
 	uid, err := strconv.Atoi(userID)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "Int2string: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "NO Auth! Int2string: " + err.Error()})
+		c.Abort()
 		return
 	}
 	users, err := DB.QueryUser(uid, DB.ByID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "QueryUser: " + err.Error()})
+		c.Abort()
 		return
 	}
 	if !ok || id != userID {

@@ -3,6 +3,7 @@ package Service
 import (
 	"MyGO-IM/DB"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -36,7 +37,8 @@ func DropMyGroup(c *gin.Context) {
 // CreateGroup 创建群聊的处理函数
 func CreateGroup(c *gin.Context) {
 	ownerID, _ := c.Get("ID")
-	ownerName, _ := c.Get("name")
+	log.Println(ownerID)
+	ownerName, _ := c.Get("nickname")
 	groupName := c.Query("groupname")
 	if groupName == "" {
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "No group name input"})

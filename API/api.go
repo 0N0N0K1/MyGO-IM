@@ -26,7 +26,9 @@ func InitRouters() {
 		User.GET("/friends", Service.GetFriends)
 		User.POST("/friends", Service.AddFriend)
 		User.DELETE("/friends", Service.DeleteFriend)
-		
+
+		//todo 加好友申请与同意拒绝
+
 		User.GET("/chat", Service.WSUpgrade)
 
 		//  test API
@@ -37,16 +39,19 @@ func InitRouters() {
 		// 群组 API
 		Group := User.Group("/groups")
 		{
+
+			//todo 群主不能退群，群主转让功能，进/退群申请与同意拒绝，群主禁言与踢人功能
+
 			// 创建/销毁
 			Group.DELETE("/:gID", Service.DropMyGroup)
-			Group.POST("", Service.CreateGroup)
+			Group.POST("/", Service.CreateGroup)
 
 			// 进入/退出
 			Group.DELETE("/:gID/members", Service.ExitGroup)
 			Group.POST("/:gID/members", Service.EnterGroup)
 
 			// 成员查看
-			Group.GET("/:gID/members;", Service.GetMembers)
+			Group.GET("/:gID/members", Service.GetMembers)
 		}
 	}
 

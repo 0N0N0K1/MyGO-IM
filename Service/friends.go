@@ -79,7 +79,7 @@ func AddFriend(c *gin.Context) {
 	}
 	frd, err = DB.QueryUser(fID, DB.ByID)
 	//对方是否存在，是否为自己
-	if frd[0].ID == 0 || userID == frd[0].ID || err != nil {
+	if len(frd) == 0 || userID == frd[0].ID || err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Illegal Addition!"})
 		return
 	}
@@ -110,7 +110,7 @@ func DeleteFriend(c *gin.Context) {
 	}
 	frd, err := DB.QueryFrd(userID.(uint), fID, DB.ByID)
 	//是否已添加
-	if frd[0].Name == "" || userID == fID || err != nil {
+	if len(frd) == 0 || userID == fID || err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Illegal delete"})
 		return
 	}
