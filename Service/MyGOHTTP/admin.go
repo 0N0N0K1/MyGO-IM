@@ -114,7 +114,7 @@ func BanUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Query user by ID error"})
 		return
 	}
-	err = DB.BanUserHelper(uint(id), t, reason)
+	err = DB.AdminBanUserHelper(uint(id), t, reason)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "1003", "err": "Ban error" + err.Error()})
 		return

@@ -37,14 +37,11 @@ func InitRouters() {
 		// 群组 API
 		Groups := Users.Group("/groups")
 		{
-
+			// 创建
 			Groups.POST("/", MyGOHTTP.CreateGroup)
 
-			//todo 群主转让功能，群主禁言与踢人功能
-
-			// 创建
 			GroupsWithMW := Groups.Group("/:gID")
-			GroupsWithMW.Use(MyGOHTTP.GroupMiddlewarw)
+			GroupsWithMW.Use(MyGOHTTP.GroupMiddleware)
 			{
 				// 销毁
 				GroupsWithMW.DELETE("/", MyGOHTTP.DropMyGroup)
@@ -52,8 +49,12 @@ func InitRouters() {
 				GroupsWithMW.DELETE("/members", MyGOHTTP.ExitGroup)
 				GroupsWithMW.POST("/members", MyGOHTTP.EnterGroup)
 
-				//todo 优化群成员查询函数
-				// 成员查看
+				// 踢出成员
+				GroupsWithMW.DELETE("/owner", MyGOHTTP.KickOutMember)
+				// 禁言成员
+				GroupsWithMW.PATCH("/owner", MyGOHTTP.DoNotSpeak)
+
+				// 查询
 				GroupsWithMW.GET("/:gID/members", MyGOHTTP.GetMembers)
 			}
 		}

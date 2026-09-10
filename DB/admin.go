@@ -3,8 +3,8 @@ package DB
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
-	"strconv"
 	"time"
 )
 
@@ -87,26 +87,55 @@ func GetFresherToday() uint {
 	return num
 }
 
-// BanUserHelper 用于永久或者暂时禁言用户
-func BanUserHelper(userID uint, t int, reason string) error {
+// AdminBanUserHelper 用于admin永久或者暂时全局禁言用户
+func AdminBanUserHelper(userID uint, t int, reason string) error {
 	if t <= 0 {
 		err := MySQL.Table("users").Where("id=?", userID).Delete(&User{}).Error
 		return err
 	}
-	err := RDB.SetNX(context.TODO(), strconv.Itoa(int(userID)), reason, time.Hour*time.Duration(t)).Err()
+	user := fmt.Sprintf("admin:slience:%d", userID)
+	err := RDB.SetNX(context.TODO(), user, reason, time.Hour*time.Duration(t)).Err()
 	if err != nil {
 		return err
 	}
 	return err
 }
 
-func QueryIfBan(userID string) (ban bool, reason string, t time.Duration) {
-	cmd := RDB.Get(context.TODO(), userID)
+// QueryIfBan 用于查询是否被禁言
+func QueryIfBan(userID uint) (ban bool, reason string, t time.Duration) {
+	user := fmt.Sprintf("admin:slience:%d", userID)
+	cmd := RDB.Get(context.TODO(), user)
 	if cmd.Err() != nil {
 		return false, "", 0
 	}
-	cmd2 := RDB.TTL(context.TODO(), userID)
+	cmd2 := RDB.TTL(context.TODO(), user)
 	t, _ = cmd2.Result()
 	reason = cmd.String()
 	return true, reason, t
+}
+
+// OwnerBanUserHelper 用于owner永久或者暂时全局禁言用户
+func OwnerBanUserHelper(userID, groupID uint, t time.Duration) error {
+	if t <= 0 {
+		err := MySQL.Table("users").Where("id=?", userID).Delete(&User{}).Error
+		return err
+	}
+	group := fmt.Sprintf("groups:%d:silence:%d", groupID, userID)
+	err := RDB.SetNX(context.TODO(), group, userID, t).Err()
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+// QueryIfSilence 用于查询是否被禁言
+func QueryIfSilence(userID, groupID uint) (ban bool, t time.Duration) {
+	user := fmt.Sprintf("groups:%d:silence:%d", groupID, userID)
+	cmd := RDB.Get(context.TODO(), user)
+	if cmd.Err() != nil {
+		return false, 0
+	}
+	cmd2 := RDB.TTL(context.TODO(), user)
+	t, _ = cmd2.Result()
+	return true, t
 }

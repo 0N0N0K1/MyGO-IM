@@ -6,7 +6,6 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"strconv"
 )
 
 type LoginForm struct {
@@ -43,7 +42,7 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Incorrect password or email address"})
 		return
 	}
-	if ban, reason, t := DB.QueryIfBan(strconv.Itoa(int(user[0].ID))); ban {
+	if ban, reason, t := DB.QueryIfBan(user[0].ID); ban {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "YOU ARE BANNED!!!", "reason": reason, "remain-time": t})
 		return
 	}

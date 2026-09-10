@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -71,4 +72,13 @@ func SendGrpStatus(status, fromName, toName, groupName string, fromID, toID, gro
 		log.Println(err)
 		return
 	}
+}
+
+// UnbindExchanger 用于当
+func UnbindExchanger(userID, groupID uint) error {
+	err := SystemMQ.MQCh.QueueUnbind(strconv.Itoa(int(userID)), strconv.Itoa(int(groupID)), "group", nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }

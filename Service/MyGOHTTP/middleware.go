@@ -35,7 +35,7 @@ func VerifyJWT(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	if ban, reason, t := DB.QueryIfBan(userID); ban {
+	if ban, reason, t := DB.QueryIfBan(uint(uid)); ban {
 		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "Banned!!!", "reason": reason, "ban-time": t})
 		c.Abort()
 		return
@@ -45,7 +45,7 @@ func VerifyJWT(c *gin.Context) {
 
 	c.Next()
 }
-func GroupMiddlewarw(c *gin.Context) {
+func GroupMiddleware(c *gin.Context) {
 	gID := c.Param("gID")
 	if gID == "" {
 		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "No groupID input"})

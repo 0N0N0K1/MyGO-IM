@@ -3,11 +3,12 @@ package MyGOWS
 import (
 	"github.com/rabbitmq/amqp091-go"
 	"log"
+	"strconv"
 )
 
 func (c *Client) ConsumeMyQueue() error {
 	//消费就绪
-	msgs, err := c.MQCh.Consume(c.Name, "", false, false, false, false, nil)
+	msgs, err := c.MQCh.Consume(strconv.Itoa(int(c.ID)), "", false, false, false, false, nil)
 	if err != nil {
 		log.Println(" c.MQCh.Consume:", err)
 		return err

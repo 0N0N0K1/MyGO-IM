@@ -14,7 +14,7 @@ func UpdateGrpStatus(memberID, groupID uint, status string) (err error) {
 		err = MySQL.Table("group_users").Create(&member).Error
 		return err
 	case "reject":
-		err = MySQL.Table("group_users").Where("group_id=? and user_id=?", memberID, groupID).Delete(&GroupUser{}).Error
+		err = MySQL.Table("group_users").Where("group_id=? and user_id=?", groupID, memberID).Delete(&GroupUser{}).Error
 		return err
 	case "accept":
 		err = MySQL.Table("group_users").Updates(&member).Error

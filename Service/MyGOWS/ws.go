@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/gorilla/websocket"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -23,7 +24,7 @@ func InitHub() {
 }
 func NewHub() *Hub {
 	return &Hub{
-		Clients:    make(map[string]*Client),
+		Clients:    make(map[uint]*Client),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 		Broadcast:  make(chan Message, 256),
@@ -36,13 +37,13 @@ func (h *Hub) Run() {
 		//上线
 		case client := <-h.Register:
 			h.mu.Lock()
-			h.Clients[client.Name] = client
+			h.Clients[client.ID] = client
 			h.mu.Unlock()
 
 		//下线
 		case client := <-h.Unregister:
 			h.mu.Lock()
-			if _, ok := h.Clients[client.Name]; ok {
+			if _, ok := h.Clients[client.ID]; ok {
 				OfflineHandler(client)
 			}
 			h.mu.Unlock()
@@ -103,10 +104,7 @@ func (c *Client) ReadPump() {
 		case "private":
 			c.SendPrivate(msg)
 		case "group":
-
 			c.SendGroup(msg)
-		case "system":
-			c.Hub.Broadcast <- msg
 		}
 	}
 }
@@ -138,13 +136,13 @@ func (c *Client) WritePump() {
 	}
 }
 func OfflineHandler(client *Client) {
-	close(client.Close)                     //关闭通道，通知子协程死亡
-	client.MQCh.Close()                     //关闭AMQP信道，防止出现僵尸消费者
-	DB.SetOffline(client.Name)              //删除Redis缓存中在线记录
-	DB.SetLastOnline(client.ID)             //设置下线时间
-	delete(client.Hub.Clients, client.Name) //从Hub中删除对应Client连接
-	close(client.Send)                      //关闭发送消息发送通道
-	H.ClientPool.Put(client)                //将client实例放回池
+	close(client.Close)                   //关闭通道，通知子协程死亡
+	client.MQCh.Close()                   //关闭AMQP信道，防止出现僵尸消费者
+	DB.SetOffline(client.Name)            //删除Redis缓存中在线记录
+	DB.SetLastOnline(client.ID)           //设置下线时间
+	delete(client.Hub.Clients, client.ID) //从Hub中删除对应Client连接
+	close(client.Send)                    //关闭发送消息发送通道
+	H.ClientPool.Put(client)              //将client实例放回池
 }
 
 func InitChat(userName string, userID uint, conn *websocket.Conn) error {
@@ -155,25 +153,25 @@ func InitChat(userName string, userID uint, conn *websocket.Conn) error {
 		return err
 	}
 	//声明收消息的队列
-	q, err := ch.QueueDeclare(userName, true, false, false, false, nil)
+	q, err := ch.QueueDeclare(strconv.Itoa(int(userID)), true, false, false, false, nil)
 	if err != nil {
 		return err
 	}
 	//将队列绑定到交换机上
-	err = ch.QueueBind(q.Name, userName, "private", false, nil)
+	err = ch.QueueBind(q.Name, strconv.Itoa(int(userID)), "private", false, nil)
 	if err != nil {
 		return err
 	}
 	groups := DB.QueryMyGroup(userID)
 	for _, group := range groups {
-		if group.GroupName != "" {
-			err = ch.QueueBind(q.Name, group.GroupName, "group", false, nil)
+		if group.ID != 0 {
+			err = ch.QueueBind(q.Name, strconv.Itoa(int(group.ID)), "group", false, nil)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	err = ch.QueueBind(q.Name, userName, "system", false, nil)
+	err = ch.QueueBind(q.Name, strconv.Itoa(int(userID)), "system", false, nil)
 	if err != nil {
 		return err
 	}
