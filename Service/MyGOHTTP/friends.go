@@ -102,7 +102,7 @@ func AddFriend(c *gin.Context) {
 			return
 		}
 		MyGOWS.SendFrdStatus(status, actorName.(string), frd[0].Name, actorID.(uint), uint(fID))
-		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Apply!"})
 	case "reject": //拒绝
 		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(uint), "reject")
 		if err != nil {
@@ -110,7 +110,7 @@ func AddFriend(c *gin.Context) {
 			return
 		}
 		MyGOWS.SendFrdStatus(status, actorName.(string), frd[0].Name, actorID.(uint), uint(fID))
-		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Reject!"})
 	case "accept": //接受
 		MyGOWS.SendFrdStatus(status, actorName.(string), frd[0].Name, actorID.(uint), uint(fID))
 		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(uint), "accept")
@@ -118,7 +118,7 @@ func AddFriend(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Addition!"})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful accept!"})
 	default:
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Input status error"})
 		return

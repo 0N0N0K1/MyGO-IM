@@ -253,6 +253,8 @@ func (c *Client) WriteHandler(message []byte) {
 	switch msg.Method {
 	case "system":
 		_ = c.Conn.WriteMessage(websocket.TextMessage, message)
+		c.AckReady <- true
+		return
 	default:
 		if !Utils.Dedup(msg.ToID, msg.MsgID, msg.Seq) {
 			log.Printf("repeat")
@@ -273,13 +275,16 @@ func (c *Client) WriteHandler(message []byte) {
 			}
 			DB.IncrGroupReadSeq(msg.ToID, c.ID, DB.GetGroupWriterSeq(msg.ToID)+1)
 		case "private":
-			_, readSeq := DB.GetPrivateSeq(msg.ToID, msg.FromID)
+			readSeq, _ := DB.GetPrivateSeq(msg.ToID, msg.FromID)
 			if readSeq != msg.Seq {
+				log.Println(readSeq)
+				log.Println("readSeq != msg.Seq")
 				c.AckReady <- false
 				return
 			}
 			err = c.Conn.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
+				log.Printf("WriteMessage+:" + err.Error())
 				c.AckReady <- false
 				return
 			}

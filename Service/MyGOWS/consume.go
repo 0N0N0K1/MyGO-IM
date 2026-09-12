@@ -20,8 +20,10 @@ func (c *Client) ConsumeMyQueue() {
 			return
 		//消费消息,转发到客户端
 		case msg = <-msgs:
+			log.Printf("写入send消息%v", string(msg.Body))
 			c.Send <- msg.Body
 			ok := <-c.AckReady
+			log.Printf("ackready %v", ok)
 			if ok {
 				msg.Ack(false)
 			} else {
