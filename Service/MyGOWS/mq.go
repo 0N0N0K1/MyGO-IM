@@ -33,10 +33,12 @@ func InitMQ() {
 		log.Fatal("system交换机创建失败")
 	}
 }
-func NewChannel() (*amqp091.Channel, error) {
+func NewChannel() (*amqp091.Channel, chan amqp091.Confirmation, error) {
 	channel, err := Conn.Channel()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return channel, nil
+	err = channel.Confirm(false)
+	confirms := channel.NotifyPublish(make(chan amqp091.Confirmation, 100))
+	return channel, confirms, nil
 }

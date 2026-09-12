@@ -13,7 +13,6 @@ func WSUpgrade(c *gin.Context) {
 	if err != nil {
 		log.Println(err)
 		c.JSON(http.StatusOK, gin.H{"code": "102", "msg": "WS UP ERROR!"})
-		c.Abort()
 		return
 	}
 	actorID, _ := c.Get("actorID")

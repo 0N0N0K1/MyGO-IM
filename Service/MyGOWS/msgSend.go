@@ -2,12 +2,32 @@ package MyGOWS
 
 import (
 	"MyGO-IM/DB"
+	"MyGO-IM/Utils"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 )
 
-func (c *Client) SendPrivate(msg Message) {
+func (c *Client) MsgSender() func(msg *Message) {
+	var deliveryTag uint64 = 1
+	return func(msg *Message) {
+		// 根据消息类型路由
+		switch msg.Type {
+		case private:
+			if c.SendPrivate(msg, deliveryTag) {
+				deliveryTag++
+			}
+		case group:
+			if c.SendGroup(msg, deliveryTag) {
+				deliveryTag++
+			}
+		case system:
+		}
+	}
+}
+func (c *Client) SendPrivate(msg *Message, deliveryTag uint64) bool {
 	var frd []DB.User
 	// 判断是否为好友
 	userTo, _ := DB.QueryUser(msg.ToID, DB.ByID)
@@ -27,7 +47,7 @@ func (c *Client) SendPrivate(msg Message) {
 				close(target.Send)
 			}
 		}
-		return
+		return false
 	}
 	// Publish到私聊交换机
 	err := c.PublishPrivate(msg)
@@ -45,18 +65,17 @@ func (c *Client) SendPrivate(msg Message) {
 				close(target.Send)
 			}
 		}
-		return
+		return false
 	}
-	//持久化到MySQL
+	// 缓存到Redis
 	data, _ := json.Marshal(msg)
-	err = DB.InsertMsg(msg.FromID, msg.ToID, msg.FromName, msg.ToName, msg.Type, string(data))
-	if err != nil {
-		//todo 持久化失败原因及处理
-		return
-	}
+	DB.RDB.Set(context.TODO(), Utils.CachePublishMsgName(deliveryTag, c.ID), data, time.Minute)
+
+	return true
+
 }
 
-func (c *Client) SendGroup(msg Message) {
+func (c *Client) SendGroup(msg *Message, deliveryTag uint64) bool {
 	// 判断发送者是否为群成员
 	if DB.QueryMember(msg.FromID, msg.ToID).ID == 0 {
 		c.Hub.mu.RLock()
@@ -70,7 +89,7 @@ func (c *Client) SendGroup(msg Message) {
 				close(target.Send)
 			}
 		}
-		return
+		return false
 	}
 	// 判断发送者是否被禁言
 	ban, t := DB.QueryIfSilence(msg.FromID, msg.ToID)
@@ -87,7 +106,7 @@ func (c *Client) SendGroup(msg Message) {
 				close(target.Send)
 			}
 		}
-		return
+		return false
 	}
 	// Publish到群聊交换机
 	err := c.PublishGroup(msg)
@@ -104,13 +123,12 @@ func (c *Client) SendGroup(msg Message) {
 				close(target.Send)
 			}
 		}
-		return
+		return false
 	}
-
+	// 缓存到Redis
 	data, _ := json.Marshal(msg)
-	err = DB.InsertMsg(msg.FromID, msg.ToID, msg.FromName, msg.ToName, msg.Type, string(data))
-	if err != nil {
-		//todo 持久化失败原因及处理
-		return
-	}
+	DB.RDB.Set(context.TODO(), Utils.CachePublishMsgName(deliveryTag, c.ID), data, time.Minute)
+
+	return true
+
 }

@@ -15,20 +15,20 @@ type SystemMQChan struct {
 var SystemMQ SystemMQChan
 
 func SystemMQChanInit() (err error) {
-	SystemMQ.MQCh, err = NewChannel()
+	SystemMQ.MQCh, _, err = NewChannel()
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func NewSystemMsg(content, fromName, toName string, fromID, toID uint) *Message {
+func NewSystemMsg(payload, fromName, toName string, fromID, toID uint) *Message {
 	return &Message{
 		Type:      "system",
 		FromName:  fromName,
 		FromID:    fromID,
 		ToID:      toID,
 		ToName:    toName,
-		Content:   content,
+		Payload:   payload,
 		Timestamp: time.Now().Unix(),
 	}
 }

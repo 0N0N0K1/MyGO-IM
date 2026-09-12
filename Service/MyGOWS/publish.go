@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func (c *Client) PublishPrivate(msg Message) error {
+func (c *Client) PublishPrivate(msg *Message) error {
 	data, _ := json.Marshal(msg)
 	err := c.MQCh.Publish("private", strconv.Itoa(int(msg.ToID)), false, false,
 		amqp091.Publishing{
@@ -18,7 +18,7 @@ func (c *Client) PublishPrivate(msg Message) error {
 	}
 	return nil
 }
-func (c *Client) PublishGroup(msg Message) error {
+func (c *Client) PublishGroup(msg *Message) error {
 	data, _ := json.Marshal(msg)
 	err := c.MQCh.Publish("group", strconv.Itoa(int(msg.ToID)), false, false,
 		amqp091.Publishing{
@@ -32,7 +32,7 @@ func (c *Client) PublishGroup(msg Message) error {
 }
 
 func (s *SystemMQChan) PublishSystem(msg *Message) error {
-	data, _ := json.Marshal(msg)
+	data, _ := json.Marshal(&msg)
 	err := s.MQCh.Publish("system", strconv.Itoa(int(msg.ToID)), false, false,
 		amqp091.Publishing{
 			Body: data,

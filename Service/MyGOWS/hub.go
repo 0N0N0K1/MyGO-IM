@@ -2,15 +2,19 @@ package MyGOWS
 
 import (
 	"MyGO-IM/DB"
+	"MyGO-IM/Utils"
+	"context"
 	"encoding/json"
+	"github.com/bwmarrin/snowflake"
 	"github.com/gorilla/websocket"
 	"log"
-	"strconv"
 	"time"
 )
 
 var H *Hub
+var SnowID *snowflake.Node
 
+// InitHub 初始化并启动 Hub
 func InitHub() {
 	H = NewHub()
 	H.ClientPool.New = func() any {
@@ -19,9 +23,18 @@ func InitHub() {
 		c := new(Client)
 		return c
 	}
+	H.MsgPool.New = func() any {
+		H.mu.Lock()
+		defer H.mu.Unlock()
+		c := new(Message)
+		return c
+	}
+	SnowID, _ = snowflake.NewNode(1)
 	go H.Run()
 	log.Println("WS集中管理器Hub创建成功")
 }
+
+// NewHub 返回一个全局 Hub 实例
 func NewHub() *Hub {
 	return &Hub{
 		Clients:    make(map[uint]*Client),
@@ -31,6 +44,7 @@ func NewHub() *Hub {
 	}
 }
 
+// Run 启动 Hub
 func (h *Hub) Run() {
 	for {
 		select {
@@ -39,6 +53,7 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			h.Clients[client.ID] = client
 			h.mu.Unlock()
+			OnlineHandler(client)
 
 		//下线
 		case client := <-h.Unregister:
@@ -65,53 +80,35 @@ func (h *Hub) Run() {
 	}
 }
 
-// ReadPump 持续读取客户端消息
+// ReadPump 持续从客户端读取消息
 func (c *Client) ReadPump() {
+	// defer 下线注销通知
 	defer func() {
 		c.Hub.Unregister <- c
 		c.Conn.Close()
 	}()
-
 	c.Conn.SetReadLimit(512 * 1024) // 最大消息 512KB
-	// 设置心跳检测（Pong 响应）
+	// 设置心跳检测
 	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		c.Conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 		return nil
 	})
-
+	// 循环读取客户端消息
 	for {
-
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("读取错误: %v", err)
+				break
 			}
-			break
 		}
+		c.MsgHandler(message)
 
-		var msg Message
-		if err := json.Unmarshal(message, &msg); err != nil {
-			log.Println(err)
-			continue
-		}
-
-		msg.FromName = c.Name
-		msg.FromID = c.ID
-		msg.Timestamp = time.Now().Unix()
-		DB.MsgNumPlus()
-		// 根据消息类型路由
-		switch msg.Type {
-		case "private":
-			c.SendPrivate(msg)
-		case "group":
-			c.SendGroup(msg)
-		}
 	}
 }
 
-// WritePump 持续向客户端写入消息
+// WritePump 持续向客户端写消息
 func (c *Client) WritePump() {
-	ticker := time.NewTicker(54 * time.Second) // 心跳间隔
+	ticker := time.NewTicker(27 * time.Second) // 心跳间隔
 	defer func() {
 		ticker.Stop()
 		c.Conn.Close()
@@ -135,6 +132,8 @@ func (c *Client) WritePump() {
 		}
 	}
 }
+
+// OfflineHandler 下线后的处理
 func OfflineHandler(client *Client) {
 	close(client.Close)                   //关闭通道，通知子协程死亡
 	client.MQCh.Close()                   //关闭AMQP信道，防止出现僵尸消费者
@@ -145,54 +144,69 @@ func OfflineHandler(client *Client) {
 	H.ClientPool.Put(client)              //将client实例放回池
 }
 
-func InitChat(userName string, userID uint, conn *websocket.Conn) error {
-
-	//创建AMQP信道
-	ch, err := NewChannel()
-	if err != nil {
-		return err
-	}
-	//声明收消息的队列
-	q, err := ch.QueueDeclare(strconv.Itoa(int(userID)), true, false, false, false, nil)
-	if err != nil {
-		return err
-	}
-	//将队列绑定到交换机上
-	err = ch.QueueBind(q.Name, strconv.Itoa(int(userID)), "private", false, nil)
-	if err != nil {
-		return err
-	}
-	groups := DB.QueryMyGroup(userID)
-	for _, group := range groups {
-		if group.ID != 0 {
-			err = ch.QueueBind(q.Name, strconv.Itoa(int(group.ID)), "group", false, nil)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	err = ch.QueueBind(q.Name, strconv.Itoa(int(userID)), "system", false, nil)
-	if err != nil {
-		return err
-	}
-
-	// 从对象池中Get一个Client实例注册，加入Hub管理
-	client := H.ClientPool.Get().(*Client)
-	client.Close = make(chan struct{})
-	client.ID = userID
-	client.Name = userName
-	client.MQCh = ch
-	client.Queue = q
-	client.Hub = H
-	client.Conn = conn
-	client.Send = make(chan []byte, 256)
-	client.Hub.Register <- client
+// OnlineHandler 注册上线后的处理
+func OnlineHandler(client *Client) {
 	//Redis进行缓存上线记录
-	DB.SetOnline(userName)
-
+	DB.SetOnline(client.Name)
 	//开辟 读+写goroutine、消费消息的goroutine
 	go client.WritePump()
 	go client.ReadPump()
 	go client.ConsumeMyQueue()
-	return nil
+	go client.ConfirmHandler()
+}
+
+// MsgHandler 从客户端收到消息后的处理
+func (c *Client) MsgHandler(message []byte) {
+	msg := c.Hub.MsgPool.Get().(Message)
+	defer c.Hub.MsgPool.Put(msg)
+	if err := json.Unmarshal(message, &msg); err != nil {
+		log.Println(err)
+		return
+	}
+	msg.MsgID = int64(SnowID.Generate())
+	msg.FromName = c.Name
+	msg.FromID = c.ID
+	msg.Timestamp = time.Now().Unix()
+	DB.MsgNumPlus()
+	c.SendFunc(&msg)
+}
+
+// ConfirmHandler 处理RabbitMQ的confirm
+func (c *Client) ConfirmHandler() {
+	for ack := range c.Confirm {
+		if ack.Ack {
+			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
+			result, err := cmd.Result()
+			if err != nil {
+				return
+			}
+			DB.RDB.Del(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
+			var msg Message
+			_ = json.Unmarshal([]byte(result), &msg)
+			//持久化到MySQL
+			_ = DB.InsertMsg(msg.FromID, msg.ToID, msg.FromName, msg.ToName, msg.Type, result)
+
+		} else {
+			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
+			result, err := cmd.Result()
+			if err != nil {
+				return
+			}
+			DB.RDB.Del(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
+			var msg Message
+			_ = json.Unmarshal([]byte(result), &msg)
+			c.Hub.mu.RLock()
+			target, ok := c.Hub.Clients[msg.FromID]
+			c.Hub.mu.RUnlock()
+
+			data, _ := json.Marshal(NewSystemMsg(msg.Payload+"发送失败", "system", msg.FromName, 0, msg.FromID))
+			if ok {
+				select {
+				case target.Send <- data:
+				default:
+					close(target.Send)
+				}
+			}
+		}
+	}
 }
