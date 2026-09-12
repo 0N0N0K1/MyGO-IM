@@ -25,6 +25,9 @@ JWT:
 WS:
   ReadBufferSize: 1024
   WriteBufferSize: 1024
+  ReadTimeout: 30
+  WriteTimeout: 3
+  ReadLimit: 512*1024
 
 rabbitMQ:
   host: 127.0.0.1
@@ -32,4 +35,3 @@ rabbitMQ:
   user: guest
   password: guest
 
-maxWorker: 200

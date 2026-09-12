@@ -60,6 +60,8 @@ func InitChat(userName string, userID uint, conn *websocket.Conn) error {
 	client.Hub = H
 	client.Conn = conn
 	client.Send = make(chan []byte, 256)
+	client.SendReady = make(chan struct{})
+	client.AckReady = make(chan bool)
 	client.Hub.Register <- client
 	client.SendFunc = client.MsgSender()
 	return nil

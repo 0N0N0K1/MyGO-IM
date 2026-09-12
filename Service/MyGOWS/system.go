@@ -23,7 +23,7 @@ func SystemMQChanInit() (err error) {
 }
 func NewSystemMsg(payload, fromName, toName string, fromID, toID uint) *Message {
 	return &Message{
-		Type:      "system",
+		Method:    "system",
 		FromName:  fromName,
 		FromID:    fromID,
 		ToID:      toID,

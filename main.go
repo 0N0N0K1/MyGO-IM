@@ -8,7 +8,6 @@ import (
 	"log"
 )
 
-// todo 群组部分
 func main() {
 	Conf.LoadConfig()
 	DB.InitMySQL()

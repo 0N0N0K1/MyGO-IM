@@ -11,7 +11,7 @@ var AdminEngine *gin.Engine
 
 func InitRouters() {
 
-	ServiceEngine = gin.Default()
+	ServiceEngine = gin.New()
 	AdminEngine = gin.Default()
 
 	ServiceEngine.POST("/login", MyGOHTTP.Login)

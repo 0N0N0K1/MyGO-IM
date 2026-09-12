@@ -23,20 +23,24 @@ type Message struct {
 	Payload   string `json:"Payload"`
 	Timestamp int64  `json:"timestamp"`
 
-	Seq   uint  `json:"seq"`
-	MsgID int64 `json:"msg_id"`
+	Seq   uint64 `json:"seq"`
+	MsgID int64  `json:"msg_id"`
 }
 type Client struct {
-	Close    chan struct{}
-	ID       uint
-	Name     string
-	Confirm  chan amqp091.Confirmation
-	Conn     *websocket.Conn  // WS连接
-	Queue    amqp091.Queue    // 客户端持有的队列
-	MQCh     *amqp091.Channel // 客户端持有的AMQP信道
-	Send     chan []byte      // 发送消息队列
-	Hub      *Hub
-	SendFunc func(msg *Message)
+	Close       chan struct{}
+	ID          uint
+	Name        string
+	Confirm     chan amqp091.Confirmation
+	SendReady   chan struct{}    //得到confirm并更新seq后通知可以发送下一条消息的Chan
+	AckReady    chan bool        //消息拉取Send完成（成功/失败）后通知consume Ack/Nack的Chan
+	ExpertSeq   uint             //本次希望consume并send的消息seq
+	DisorderMag []Message        // 存放乱序到达的Msg
+	Conn        *websocket.Conn  // WS连接
+	Queue       amqp091.Queue    // 客户端持有的队列
+	MQCh        *amqp091.Channel // 客户端持有的AMQP信道
+	Send        chan []byte      // 发送消息队列
+	Hub         *Hub
+	SendFunc    func(msg *Message) bool
 }
 
 // Hub 管理所有客户端连接

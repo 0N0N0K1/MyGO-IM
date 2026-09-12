@@ -8,6 +8,7 @@ func UpdateGrpStatus(memberID, groupID uint, status string) (err error) {
 		GroupID: groupID,
 		UserID:  memberID,
 		Status:  status,
+		ReadSeq: GetGroupWriterSeq(groupID),
 	}
 	switch status {
 	case "pending":

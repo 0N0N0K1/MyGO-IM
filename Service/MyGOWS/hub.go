@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"github.com/bwmarrin/snowflake"
 	"github.com/gorilla/websocket"
+
 	"log"
 	"time"
 )
@@ -54,6 +55,7 @@ func (h *Hub) Run() {
 			h.Clients[client.ID] = client
 			h.mu.Unlock()
 			OnlineHandler(client)
+			log.Printf("用户%s上线", client.Name)
 
 		//下线
 		case client := <-h.Unregister:
@@ -62,7 +64,7 @@ func (h *Hub) Run() {
 				OfflineHandler(client)
 			}
 			h.mu.Unlock()
-
+			log.Printf("用户%s下线", client.Name)
 		//广播
 		case msg := <-h.Broadcast:
 			data, _ := json.Marshal(msg)
@@ -85,12 +87,12 @@ func (c *Client) ReadPump() {
 	// defer 下线注销通知
 	defer func() {
 		c.Hub.Unregister <- c
-		c.Conn.Close()
+		_ = c.Conn.Close()
 	}()
 	c.Conn.SetReadLimit(512 * 1024) // 最大消息 512KB
 	// 设置心跳检测
 	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+		_ = c.Conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 		return nil
 	})
 	// 循环读取客户端消息
@@ -101,8 +103,20 @@ func (c *Client) ReadPump() {
 				break
 			}
 		}
-		c.MsgHandler(message)
+		if c.ReadHandler(message) {
+			select {
+			case <-c.Close:
+				return
+			case <-c.SendReady:
+			}
+		} else {
+			select {
+			case <-c.Close:
+				return
+			default:
 
+			}
+		}
 	}
 }
 
@@ -111,21 +125,22 @@ func (c *Client) WritePump() {
 	ticker := time.NewTicker(27 * time.Second) // 心跳间隔
 	defer func() {
 		ticker.Stop()
-		c.Conn.Close()
+		_ = c.Conn.Close()
 	}()
 
 	for {
 		select {
+		case <-c.Close:
+			return
 		case message, ok := <-c.Send:
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			_ = c.Conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
 			if !ok {
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				_ = c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			c.Conn.WriteMessage(websocket.TextMessage, message)
-
+			c.WriteHandler(message)
 		case <-ticker.C:
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			_ = c.Conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
@@ -155,9 +170,9 @@ func OnlineHandler(client *Client) {
 	go client.ConfirmHandler()
 }
 
-// MsgHandler 从客户端收到消息后的处理
-func (c *Client) MsgHandler(message []byte) {
-	msg := c.Hub.MsgPool.Get().(Message)
+// ReadHandler 从客户端收到消息后的处理
+func (c *Client) ReadHandler(message []byte) (sent bool) {
+	msg := c.Hub.MsgPool.Get().(*Message)
 	defer c.Hub.MsgPool.Put(msg)
 	if err := json.Unmarshal(message, &msg); err != nil {
 		log.Println(err)
@@ -168,12 +183,15 @@ func (c *Client) MsgHandler(message []byte) {
 	msg.FromID = c.ID
 	msg.Timestamp = time.Now().Unix()
 	DB.MsgNumPlus()
-	c.SendFunc(&msg)
+	return c.SendFunc(msg)
 }
 
 // ConfirmHandler 处理RabbitMQ的confirm
 func (c *Client) ConfirmHandler() {
 	for ack := range c.Confirm {
+
+		log.Printf("收到confirm tag: %d ack: %v", ack.DeliveryTag, ack.Ack)
+
 		if ack.Ack {
 			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
 			result, err := cmd.Result()
@@ -182,9 +200,19 @@ func (c *Client) ConfirmHandler() {
 			}
 			DB.RDB.Del(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
 			var msg Message
-			_ = json.Unmarshal([]byte(result), &msg)
+			err = json.Unmarshal([]byte(result), &msg)
 			//持久化到MySQL
-			_ = DB.InsertMsg(msg.FromID, msg.ToID, msg.FromName, msg.ToName, msg.Type, result)
+			err = DB.InsertMsg(msg.FromID, msg.ToID, msg.Seq, msg.FromName, msg.ToName, msg.Method, result)
+			//发送者writeSeq+1
+			switch msg.Method {
+			case "group":
+				DB.IncrGroupWriteSeq(msg.ToID, msg.Seq+1)
+			case "private":
+				DB.IncrPrivateWriteSeq(msg.FromID, msg.ToID, msg.Seq+1)
+			}
+
+			c.SendReady <- struct{}{}
+			log.Printf("tag: %d  %v 已存入mysql", ack.DeliveryTag, msg)
 
 		} else {
 			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
@@ -203,10 +231,62 @@ func (c *Client) ConfirmHandler() {
 			if ok {
 				select {
 				case target.Send <- data:
+				//监听客户端连接是否关闭
+				case <-c.Close:
+					return
 				default:
 					close(target.Send)
 				}
 			}
 		}
 	}
+}
+
+func (c *Client) WriteHandler(message []byte) {
+	var msg Message
+	err := json.Unmarshal(message, &msg)
+	if err != nil {
+		c.AckReady <- false
+		return
+	}
+	log.Printf("write begin %v", msg)
+	switch msg.Method {
+	case "system":
+		_ = c.Conn.WriteMessage(websocket.TextMessage, message)
+	default:
+		if !Utils.Dedup(msg.ToID, msg.MsgID, msg.Seq) {
+			log.Printf("repeat")
+			c.AckReady <- true
+			return
+		}
+		switch msg.Method {
+		case "group":
+			readSeq := DB.GetGroupReadSeq(msg.ToID, msg.FromID)
+			if readSeq != msg.Seq {
+				c.AckReady <- false
+				return
+			}
+			err = c.Conn.WriteMessage(websocket.TextMessage, message)
+			if err != nil {
+				c.AckReady <- false
+				return
+			}
+			DB.IncrGroupReadSeq(msg.ToID, c.ID, DB.GetGroupWriterSeq(msg.ToID)+1)
+		case "private":
+			_, readSeq := DB.GetPrivateSeq(msg.ToID, msg.FromID)
+			if readSeq != msg.Seq {
+				c.AckReady <- false
+				return
+			}
+			err = c.Conn.WriteMessage(websocket.TextMessage, message)
+			if err != nil {
+				c.AckReady <- false
+				return
+			}
+			DB.IncrPrivateReadSeq(msg.ToID, msg.FromID, msg.Seq+1)
+		}
+		c.AckReady <- true
+
+	}
+
 }

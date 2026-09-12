@@ -10,32 +10,34 @@ import (
 	"time"
 )
 
-func (c *Client) MsgSender() func(msg *Message) {
+func (c *Client) MsgSender() func(msg *Message) bool {
 	var deliveryTag uint64 = 1
-	return func(msg *Message) {
+	return func(msg *Message) bool {
+		log.Printf("收到一条消息: %v", msg)
 		// 根据消息类型路由
-		switch msg.Type {
+		switch msg.Method {
 		case private:
 			if c.SendPrivate(msg, deliveryTag) {
 				deliveryTag++
+				return true
 			}
 		case group:
 			if c.SendGroup(msg, deliveryTag) {
 				deliveryTag++
+				return true
 			}
 		case system:
 		}
+		return false
 	}
 }
 func (c *Client) SendPrivate(msg *Message, deliveryTag uint64) bool {
-	var frd []DB.User
-	// 判断是否为好友
-	userTo, _ := DB.QueryUser(msg.ToID, DB.ByID)
-	if len(userTo) != 0 {
-		frd, _ = DB.QueryFrd(msg.FromID, userTo[0].ID, DB.ByID)
-	}
-	// 对方不是好友返回系统消息
-	if len(frd) == 0 {
+
+	// 判断是否为好友,拿到发送的Seq
+	_, writeSeq := DB.GetPrivateSeq(msg.FromID, msg.ToID)
+	if writeSeq != 0 {
+		msg.Seq = writeSeq
+	} else {
 		c.Hub.mu.RLock()
 		target, ok := c.Hub.Clients[msg.FromID]
 		c.Hub.mu.RUnlock()
@@ -49,9 +51,12 @@ func (c *Client) SendPrivate(msg *Message, deliveryTag uint64) bool {
 		}
 		return false
 	}
+
 	// Publish到私聊交换机
 	err := c.PublishPrivate(msg)
-	log.Println("published")
+
+	log.Printf("deliveryTag:%d is published", deliveryTag)
+
 	// Publish失败通知
 	if err != nil {
 		c.Hub.mu.RLock()
@@ -71,11 +76,14 @@ func (c *Client) SendPrivate(msg *Message, deliveryTag uint64) bool {
 	data, _ := json.Marshal(msg)
 	DB.RDB.Set(context.TODO(), Utils.CachePublishMsgName(deliveryTag, c.ID), data, time.Minute)
 
+	log.Printf("deliveryTag:%d is cachaed", deliveryTag)
+
 	return true
 
 }
 
 func (c *Client) SendGroup(msg *Message, deliveryTag uint64) bool {
+
 	// 判断发送者是否为群成员
 	if DB.QueryMember(msg.FromID, msg.ToID).ID == 0 {
 		c.Hub.mu.RLock()
@@ -108,6 +116,8 @@ func (c *Client) SendGroup(msg *Message, deliveryTag uint64) bool {
 		}
 		return false
 	}
+	// 拿到群的WriteSeq
+	msg.Seq = DB.GetGroupWriterSeq(msg.ToID)
 	// Publish到群聊交换机
 	err := c.PublishGroup(msg)
 	// Publish失败通知

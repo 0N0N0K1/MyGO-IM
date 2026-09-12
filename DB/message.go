@@ -5,14 +5,15 @@ import (
 	"errors"
 )
 
-func InsertMsg(from, to uint, fromname, toname, MsgType string, Content string) (err error) {
+func InsertMsg(from, to uint, seq uint64, fromname, toname, method string, Content string) (err error) {
 	var msgs = PrivateMessage{
 		ToID:    to,
 		FromID:  from,
 		Content: Content,
+		Seq:     seq,
 	}
 
-	switch MsgType {
+	switch method {
 	case "private":
 
 		err = MySQL.Table("private_messages").Create(&msgs).Error
@@ -27,8 +28,8 @@ func InsertMsg(from, to uint, fromname, toname, MsgType string, Content string) 
 	return err
 }
 
-func QueryUserMsg(ID uint, MsgType string) (msgs []PrivateMessage, err error) {
-	switch MsgType {
+func QueryUserMsg(ID uint, method string) (msgs []PrivateMessage, err error) {
+	switch method {
 	case "private":
 		err = MySQL.Table("private_messages").Select("*").Where("from_id=? or to_id=?", ID, ID).Find(&msgs).Error
 

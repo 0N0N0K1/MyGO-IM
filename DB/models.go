@@ -40,6 +40,7 @@ type UserInfo struct {
 
 type Group struct {
 	ID        uint      `gorm:"primarykey"`
+	WriteSeq  uint64    `gorm:"default:1"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 	GroupName string    `gorm:"size:100;not null"`
@@ -50,18 +51,23 @@ type Group struct {
 }
 
 type UserUser struct {
-	ActiveID  uint      `gorm:"primaryKey;comment:主动添加方"`
-	PassiveID uint      `gorm:"primaryKey;comment:被动添加方"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`
-	Status    string    `gorm:""` // apply | reject | accept
-	Active    *User     `gorm:"foreignKey:ActiveID;references:ID;constraint:OnDelete:CASCADE"`
-	Passive   *User     `gorm:"foreignKey:PassiveID;references:ID;constraint:OnDelete:CASCADE"`
+	ActiveID        uint      `gorm:"primaryKey;comment:主动添加方"`
+	PassiveID       uint      `gorm:"primaryKey;comment:被动添加方"`
+	CreatedAt       time.Time `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time `gorm:"autoUpdateTime"`
+	ActiveReadSeq   uint64    `gorm:"default:1"`
+	ActiveWriteSeq  uint64    `gorm:"default:1"`
+	PassiveReadSeq  uint64    `gorm:"default:1"`
+	PassiveWriteSeq uint64    `gorm:"default:1"`
+	Status          string    `gorm:""` // apply | reject | accept
+	Active          *User     `gorm:"foreignKey:ActiveID;references:ID;constraint:OnDelete:CASCADE"`
+	Passive         *User     `gorm:"foreignKey:PassiveID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 type GroupUser struct {
 	GroupID   uint      `gorm:"primaryKey"`
 	UserID    uint      `gorm:"primaryKey"`
+	ReadSeq   uint64    `gorm:"default:1"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 	Status    string    `gorm:""` // apply | reject | accept
@@ -70,6 +76,7 @@ type GroupUser struct {
 }
 type GroupMessage struct {
 	ID       uint `gorm:"primaryKey"`
+	Seq      uint64
 	ToID     uint
 	FromID   uint
 	FromName string
@@ -81,6 +88,7 @@ type GroupMessage struct {
 }
 type PrivateMessage struct {
 	ID       uint `gorm:"primaryKey"`
+	Seq      uint64
 	ToID     uint
 	FromID   uint
 	FromName string
