@@ -17,7 +17,8 @@ type Message struct {
 	FromID   uint   `json:"form_id"`
 	ToName   string `json:"to_name"`
 	ToID     uint   `json:"to_id"`
-	Method   string `json:"method"` //  "private" | "system" | "group"
+	//TODO 扩展 immediate 消息类型与 system 区分开
+	Method string `json:"method"` //  "private" | "system" | "group"
 
 	Type      string `json:"type"` //TODO 扩展消息类型
 	Payload   string `json:"Payload"`
@@ -26,6 +27,7 @@ type Message struct {
 	Seq   uint64 `json:"seq"`
 	MsgID int64  `json:"msg_id"`
 }
+
 type Client struct {
 	Close       chan struct{}
 	ID          uint
@@ -40,7 +42,7 @@ type Client struct {
 	MQCh        *amqp091.Channel // 客户端持有的AMQP信道
 	Send        chan []byte      // 发送消息队列
 	Hub         *Hub
-	SendFunc    func(msg *Message) bool
+	SendFunc    func(msg *Message) bool // 发送消息用的函数
 }
 
 // Hub 管理所有客户端连接
@@ -50,6 +52,6 @@ type Hub struct {
 	Unregister chan *Client     // 连接断开Chan
 	Broadcast  chan Message     // 广播消息Chan
 	mu         sync.RWMutex     // 保护 Clients 集合
-	ClientPool sync.Pool
-	MsgPool    sync.Pool
+	ClientPool sync.Pool        // Client 池
+	MsgPool    sync.Pool        // Message 池
 }

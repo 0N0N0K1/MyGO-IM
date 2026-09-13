@@ -9,6 +9,7 @@ import (
 
 var Conn *amqp091.Connection
 
+// InitMQ RabbitMQ连接与交换机/队列初始化
 func InitMQ() {
 	var err error
 	Conn, err = amqp091.Dial(Conf.MQURL)
@@ -34,6 +35,8 @@ func InitMQ() {
 		log.Fatal("system交换机创建失败")
 	}
 }
+
+// NewChannel 返回带confirm机制的 AMQP 通道
 func NewChannel() (*amqp091.Channel, chan amqp091.Confirmation, error) {
 	channel, err := Conn.Channel()
 	if err != nil {
@@ -44,6 +47,7 @@ func NewChannel() (*amqp091.Channel, chan amqp091.Confirmation, error) {
 	return channel, confirms, nil
 }
 
+// RegisterNewBind 用户注册后创建自己的队列与绑定交换机
 func RegisterNewBind(userID uint) error {
 
 	//声明收消息的队列
@@ -63,8 +67,10 @@ func RegisterNewBind(userID uint) error {
 	}
 	return nil
 }
+
+// GroupNewBind 用户成功加入群聊后绑定对应群聊
 func GroupNewBind(userID, groupID uint) error {
-	//声明收消息的队列
+
 	err := SystemMQ.MQCh.QueueBind(strconv.Itoa(int(userID)), strconv.Itoa(int(groupID)), "group", false, nil)
 	if err != nil {
 		return err

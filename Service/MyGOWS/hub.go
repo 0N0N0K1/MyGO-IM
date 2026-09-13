@@ -82,7 +82,7 @@ func (h *Hub) Run() {
 	}
 }
 
-// ReadPump 持续从客户端读取消息
+// ReadPump 持续从客户端读消息
 func (c *Client) ReadPump() {
 	// defer 下线注销通知
 	defer func() {
@@ -148,29 +148,7 @@ func (c *Client) WritePump() {
 	}
 }
 
-// OfflineHandler 下线后的处理
-func OfflineHandler(client *Client) {
-	close(client.Close)                   //关闭通道，通知子协程死亡
-	client.MQCh.Close()                   //关闭AMQP信道，防止出现僵尸消费者
-	DB.SetOffline(client.Name)            //删除Redis缓存中在线记录
-	DB.SetLastOnline(client.ID)           //设置下线时间
-	delete(client.Hub.Clients, client.ID) //从Hub中删除对应Client连接
-	close(client.Send)                    //关闭发送消息发送通道
-	H.ClientPool.Put(client)              //将client实例放回池
-}
-
-// OnlineHandler 注册上线后的处理
-func OnlineHandler(client *Client) {
-	//Redis进行缓存上线记录
-	DB.SetOnline(client.Name)
-	//开辟 读+写goroutine、消费消息的goroutine
-	go client.WritePump()
-	go client.ReadPump()
-	go client.ConsumeMyQueue()
-	go client.ConfirmHandler()
-}
-
-// ReadHandler 从客户端收到消息后的处理
+// ReadHandler 从客户端收到消息的处理函数
 func (c *Client) ReadHandler(message []byte) (sent bool) {
 	msg := c.Hub.MsgPool.Get().(*Message)
 	defer c.Hub.MsgPool.Put(msg)
@@ -186,62 +164,7 @@ func (c *Client) ReadHandler(message []byte) (sent bool) {
 	return c.SendFunc(msg)
 }
 
-// ConfirmHandler 处理RabbitMQ的confirm
-func (c *Client) ConfirmHandler() {
-	for ack := range c.Confirm {
-
-		log.Printf("收到confirm tag: %d ack: %v", ack.DeliveryTag, ack.Ack)
-
-		if ack.Ack {
-			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
-			result, err := cmd.Result()
-			if err != nil {
-				return
-			}
-			DB.RDB.Del(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
-			var msg Message
-			err = json.Unmarshal([]byte(result), &msg)
-			//持久化到MySQL
-			err = DB.InsertMsg(msg.FromID, msg.ToID, msg.Seq, msg.FromName, msg.ToName, msg.Method, result)
-			//发送者writeSeq+1
-			switch msg.Method {
-			case "group":
-				DB.IncrGroupWriteSeq(msg.ToID, msg.Seq+1)
-			case "private":
-				DB.IncrPrivateWriteSeq(msg.FromID, msg.ToID, msg.Seq+1)
-			}
-
-			c.SendReady <- struct{}{}
-			log.Printf("tag: %d  %v 已存入mysql", ack.DeliveryTag, msg)
-
-		} else {
-			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
-			result, err := cmd.Result()
-			if err != nil {
-				return
-			}
-			DB.RDB.Del(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
-			var msg Message
-			_ = json.Unmarshal([]byte(result), &msg)
-			c.Hub.mu.RLock()
-			target, ok := c.Hub.Clients[msg.FromID]
-			c.Hub.mu.RUnlock()
-
-			data, _ := json.Marshal(NewSystemMsg(msg.Payload+"发送失败", "system", msg.FromName, 0, msg.FromID))
-			if ok {
-				select {
-				case target.Send <- data:
-				//监听客户端连接是否关闭
-				case <-c.Close:
-					return
-				default:
-					close(target.Send)
-				}
-			}
-		}
-	}
-}
-
+// WriteHandler 向客户端发送消息的处理函数
 func (c *Client) WriteHandler(message []byte) {
 	var msg Message
 	err := json.Unmarshal(message, &msg)
@@ -299,4 +222,82 @@ func (c *Client) WriteHandler(message []byte) {
 	}
 	c.AckReady <- true
 
+}
+
+// ConfirmHandler 异步处理发送消息后RabbitMQ的confirm
+func (c *Client) ConfirmHandler() {
+	for ack := range c.Confirm {
+
+		log.Printf("收到confirm tag: %d ack: %v", ack.DeliveryTag, ack.Ack)
+
+		if ack.Ack {
+			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
+			result, err := cmd.Result()
+			if err != nil {
+				return
+			}
+			DB.RDB.Del(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
+			var msg Message
+			err = json.Unmarshal([]byte(result), &msg)
+			//持久化到MySQL
+			err = DB.InsertMsg(msg.FromID, msg.ToID, msg.Seq, msg.FromName, msg.ToName, msg.Method, result)
+			//发送者writeSeq+1
+			switch msg.Method {
+			case "group":
+				DB.IncrGroupWriteSeq(msg.ToID, msg.Seq+1)
+			case "private":
+				DB.IncrPrivateWriteSeq(msg.FromID, msg.ToID, msg.Seq+1)
+			}
+
+			c.SendReady <- struct{}{}
+			log.Printf("tag: %d  %v 已存入mysql", ack.DeliveryTag, msg)
+
+		} else {
+			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
+			result, err := cmd.Result()
+			if err != nil {
+				return
+			}
+			DB.RDB.Del(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
+			var msg Message
+			_ = json.Unmarshal([]byte(result), &msg)
+			c.Hub.mu.RLock()
+			target, ok := c.Hub.Clients[msg.FromID]
+			c.Hub.mu.RUnlock()
+
+			data, _ := json.Marshal(NewSystemMsg(msg.Payload+"发送失败", "system", msg.FromName, 0, msg.FromID))
+			if ok {
+				select {
+				case target.Send <- data:
+				//监听客户端连接是否关闭
+				case <-c.Close:
+					return
+				default:
+					close(target.Send)
+				}
+			}
+		}
+	}
+}
+
+// OfflineHandler 下线后的处理
+func OfflineHandler(client *Client) {
+	close(client.Close)                   //关闭通道，通知子协程死亡
+	client.MQCh.Close()                   //关闭AMQP信道，防止出现僵尸消费者
+	DB.SetOffline(client.ID)              //删除Redis缓存中在线记录
+	DB.SetLastOnline(client.ID)           //设置下线时间
+	delete(client.Hub.Clients, client.ID) //从Hub中删除对应Client连接
+	close(client.Send)                    //关闭发送消息发送通道
+	H.ClientPool.Put(client)              //将client实例放回池
+}
+
+// OnlineHandler 注册上线后的处理
+func OnlineHandler(client *Client) {
+	//Redis进行缓存上线记录
+	DB.SetOnline(client.ID)
+	//开辟 读+写goroutine、消费消息的goroutine
+	go client.WritePump()
+	go client.ReadPump()
+	go client.ConsumeMyQueue()
+	go client.ConfirmHandler()
 }

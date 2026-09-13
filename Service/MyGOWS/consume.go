@@ -6,6 +6,7 @@ import (
 	"strconv"
 )
 
+// ConsumeMyQueue 持续从RabbitMQ拉取消息写入Send通道并等待ACK
 func (c *Client) ConsumeMyQueue() {
 	//消费就绪
 	msgs, err := c.MQCh.Consume(strconv.Itoa(int(c.ID)), "", false, false, false, false, nil)
@@ -29,7 +30,6 @@ func (c *Client) ConsumeMyQueue() {
 			} else {
 				msg.Nack(false, true)
 			}
-		//返回NACK 处理失败，重新入队
 		default:
 
 		}

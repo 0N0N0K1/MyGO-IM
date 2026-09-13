@@ -45,6 +45,8 @@ func VerifyJWT(c *gin.Context) {
 
 	c.Next()
 }
+
+// GroupMiddleware 群聊路由组中间价，通过path提前set一些信息在context中
 func GroupMiddleware(c *gin.Context) {
 	gID := c.Param("gID")
 	if gID == "" {

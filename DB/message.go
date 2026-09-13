@@ -5,6 +5,7 @@ import (
 	"errors"
 )
 
+// InsertMsg 插入一条消息
 func InsertMsg(from, to uint, seq uint64, fromname, toname, method string, Content string) (err error) {
 	var msgs = PrivateMessage{
 		ToID:    to,
@@ -28,6 +29,9 @@ func InsertMsg(from, to uint, seq uint64, fromname, toname, method string, Conte
 	return err
 }
 
+//TODO 优化查找逻辑
+
+// QueryUserMsg 查找聊天记录
 func QueryUserMsg(ID uint, method string) (msgs []PrivateMessage, err error) {
 	switch method {
 	case "private":
@@ -40,6 +44,8 @@ func QueryUserMsg(ID uint, method string) (msgs []PrivateMessage, err error) {
 	}
 	return
 }
+
+// MsgNumPlus 今日聊天记录数+1
 func MsgNumPlus() {
 	RDB.Incr(context.TODO(), "messageNum")
 }

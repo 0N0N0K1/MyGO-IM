@@ -4,16 +4,18 @@ import (
 	"MyGO-IM/API"
 	"MyGO-IM/Conf"
 	"MyGO-IM/DB"
-	WS2 "MyGO-IM/Service/MyGOWS"
+	"MyGO-IM/Service/MyGOWS"
 	"log"
 )
 
+// TODO 解决群聊获取/修改Read_seq与Writer_seq时的并发问题——————MySQL事务
 func main() {
+
 	Conf.LoadConfig()
 	DB.InitMySQL()
 	DB.InitRedis()
-	WS2.InitHub()
-	WS2.InitMQ()
+	MyGOWS.InitHub()
+	MyGOWS.InitMQ()
 	API.InitRouters()
 	go func() {
 		err := API.ServiceEngine.Run(Conf.UserAddr)

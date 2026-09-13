@@ -140,7 +140,6 @@ func AuthCode(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Auth code is sent!"})
 
 	case "register":
-
 		user, err := DB.QueryUser(postform.Email, DB.ByEmail)
 		if len(user) != 0 || err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 100, "error": "This email address is already registered"})
@@ -152,8 +151,56 @@ func AuthCode(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Auth code is sent!"})
+	case "delete":
+		user, err := DB.QueryUser(postform.Email, DB.ByEmail)
+		if len(user) == 0 || err == nil {
+			c.JSON(http.StatusOK, gin.H{"code": 100, "error": "This email address don't register"})
+			return
+		}
+		if !Utils.VerifyPwd(postform.Email, postform.Password) {
+			c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Incorrect password or email address"})
+			return
+		}
+		err = Utils.SendAuthMail(postform.Email)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 100, "msg": "SendAuthMail: " + err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Auth code is sent!"})
 	}
-}
-func DropUser(c *gin.Context) {
 
+}
+
+// DeleteUser 删除/注销用户
+func DeleteUser(c *gin.Context) {
+	userID, _ := c.Get("actorID")
+	var postform LoginForm
+	if err := c.BindJSON(&postform); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "BindJSON: " + err.Error()})
+		return
+	}
+	if postform.Password == "" || postform.Email == "" || postform.Code == "" {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Your input can't be NULL"})
+		return
+	}
+	cmd := DB.RDB.Get(context.TODO(), "auth:code:"+postform.Code)
+	result, err := cmd.Result()
+	if err != nil || result != postform.Email {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Invalid auth-code"})
+		return
+	}
+	user, err := DB.QueryUser(postform.Email, DB.ByEmail)
+	if err != nil || len(user) == 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "QueryUser ERROR"})
+		return
+	}
+	if !Utils.VerifyPwd(user[0].Password, postform.Password) {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Incorrect password or email address"})
+		return
+	}
+	err = DB.DeleteUser(userID.(uint))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "DeleteUser fail: " + err.Error()})
+		return
+	}
 }

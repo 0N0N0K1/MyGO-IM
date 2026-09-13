@@ -11,14 +11,17 @@ import (
 	"time"
 )
 
+// CachePublishMsgName 返回 deliverTag 与 Msg 缓存的键名
 func CachePublishMsgName(deliverTag uint64, userID uint) string {
 	return fmt.Sprintf("user:%s:tag:%s", strconv.Itoa(int(userID)), strconv.Itoa(int(deliverTag)))
 }
 
+// CacheDedupMsgID 返回最近收到消息缓存msgID的键名
 func CacheDedupMsgID(userID uint, msgID int64) string {
 	return fmt.Sprintf("user:%s:dedup:%s", strconv.Itoa(int(userID)), strconv.Itoa(int(msgID)))
 }
 
+// Dedup 用于使用 msgID 判断是否已经处理过
 func Dedup(userID uint, msgID int64, seq uint64) bool {
 
 	// 1. 判重

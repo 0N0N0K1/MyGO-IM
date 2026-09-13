@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// MsgSender 闭包返回 SendFunc ,用于发送消息，并保持 DeliveryTag 与 Message 的对应关系
 func (c *Client) MsgSender() func(msg *Message) bool {
 	var deliveryTag uint64 = 1
 	return func(msg *Message) bool {
@@ -27,10 +28,13 @@ func (c *Client) MsgSender() func(msg *Message) bool {
 				return true
 			}
 		case system:
+			//TODO 系统消息的Publish
 		}
 		return false
 	}
 }
+
+// SendPrivate publish到私人交换机
 func (c *Client) SendPrivate(msg *Message, deliveryTag uint64) bool {
 
 	// 判断是否为好友,拿到发送的Seq
@@ -82,6 +86,7 @@ func (c *Client) SendPrivate(msg *Message, deliveryTag uint64) bool {
 
 }
 
+// SendGroup publish到群聊交换机
 func (c *Client) SendGroup(msg *Message, deliveryTag uint64) bool {
 
 	// 判断发送者是否为群成员

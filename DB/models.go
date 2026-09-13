@@ -27,15 +27,16 @@ type User struct {
 }
 
 type UserInfo struct {
-	UserID    uint   `gorm:"primaryKey"`
-	Addr      string `gorm:"size:255"`
-	Age       int
-	Gender    string    `gorm:"size:10"`
-	Signature string    `gorm:"size:255"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`
+	UserID    uint      `json:"-" gorm:"primaryKey"`
+	Addr      string    `json:"addr" binding:"omitempty,min=1,max=255"`
+	Age       int       `json:"-" binding:"omitempty,gte=0,lte=150"`
+	Birthday  time.Time `json:"birthday" binding:"omitempty,datetime=2006-01-02"`
+	Gender    string    `json:"gender" binding:"omitempty,oneof=male female unknown"`
+	Signature string    `json:"signature" binding:"omitempty,max=255"`
+	CreatedAt time.Time `json:"-" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"-" gorm:"autoUpdateTime"`
 
-	User *User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
+	User *User `json:"-" gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 type Group struct {
@@ -60,8 +61,8 @@ type UserUser struct {
 	PassiveReadSeq  uint64    `gorm:"default:1"`
 	PassiveWriteSeq uint64    `gorm:"default:1"`
 	Status          string    `gorm:""` // apply | reject | accept
-	Active          *User     `gorm:"foreignKey:ActiveID;references:ID;constraint:OnDelete:CASCADE"`
-	Passive         *User     `gorm:"foreignKey:PassiveID;references:ID;constraint:OnDelete:CASCADE"`
+	Active          *User     `gorm:"foreignKey:ActiveID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	Passive         *User     `gorm:"foreignKey:PassiveID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 type GroupUser struct {
@@ -75,25 +76,21 @@ type GroupUser struct {
 	User      *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 type GroupMessage struct {
-	ID       uint `gorm:"primaryKey"`
-	Seq      uint64
-	ToID     uint
-	FromID   uint
-	FromName string
-	ToName   string
-	Content  string `gorm:"type:text"`
+	ID      uint `gorm:"primaryKey"`
+	Seq     uint64
+	ToID    uint
+	FromID  uint
+	Content string `gorm:"type:text"`
 
 	To   *Group `gorm:"foreignKey:ToID;references:ID;constraint:OnDelete:CASCADE"  json:"-"`
 	From *User  `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE"  json:"-"`
 }
 type PrivateMessage struct {
-	ID       uint `gorm:"primaryKey"`
-	Seq      uint64
-	ToID     uint
-	FromID   uint
-	FromName string
-	ToName   string
-	Content  string `gorm:"type:text"`
+	ID      uint `gorm:"primaryKey"`
+	Seq     uint64
+	ToID    uint
+	FromID  uint
+	Content string `gorm:"type:text"`
 
 	To   *User `gorm:"foreignKey:ToID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 	From *User `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE" json:"-"`

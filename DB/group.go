@@ -1,5 +1,6 @@
 package DB
 
+// InsertGroup 创建群聊
 func InsertGroup(ownerID uint, ownerName, groupName string) error {
 	var group = Group{
 		GroupName: groupName,
@@ -11,33 +12,24 @@ func InsertGroup(ownerID uint, ownerName, groupName string) error {
 	return err
 }
 
+// QueryGroup 查找群聊
 func QueryGroup(groupID uint) Group {
 	var result Group
 	MySQL.Table("groups").Where("id=?", groupID).First(&result)
 	return result
 }
-func QueryMyGroup(input uint) []Group {
+
+// QueryMyGroup 查找自己加入的群聊
+func QueryMyGroup(userID uint) []Group {
 	var result []Group
 	MySQL.
 		Raw("select b.group_name, b.id from users a,`groups` b,group_users c where a.id=? and b.id=c.group_id and a.id=c.user_id ",
-			input).
+			userID).
 		Find(&result)
 	return result
 }
 
-// IsOwner 用于判断是否为群主
-func IsOwner(ownerID, groupID uint) bool {
-	var out []GroupUser
-	err := MySQL.
-		Raw("select * from `groups` a where a.id=? and a.owner_id=?", groupID, ownerID).
-		First(&out).Error
-	if err != nil || len(out) == 0 {
-		return false
-	}
-	return true
-}
-
-// DropGroup 用于销毁一个群
+// DropGroup 销毁一个群
 func DropGroup(groupID uint) error {
 	return MySQL.Table("groups").Where("id=?", groupID).Delete(&Group{}).Error
 }

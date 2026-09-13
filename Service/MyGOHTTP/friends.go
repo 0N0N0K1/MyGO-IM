@@ -141,7 +141,7 @@ func DeleteFriend(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Illegal delete"})
 		return
 	}
-	//插入到中间表
+	//删除
 	err = DB.DeleteFrd(actorID.(uint), uint(fID))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "DeleteFrd: " + err.Error()})

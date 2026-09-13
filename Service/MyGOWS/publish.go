@@ -2,11 +2,11 @@ package MyGOWS
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/rabbitmq/amqp091-go"
 	"strconv"
 )
 
+// PublishPrivate 私聊 Publish 处理函数
 func (c *Client) PublishPrivate(msg *Message) error {
 	data, _ := json.Marshal(msg)
 	err := c.MQCh.Publish("private", strconv.Itoa(int(msg.ToID)), false, false,
@@ -18,6 +18,8 @@ func (c *Client) PublishPrivate(msg *Message) error {
 	}
 	return nil
 }
+
+// PublishGroup 群聊 Publish 处理函数
 func (c *Client) PublishGroup(msg *Message) error {
 	data, _ := json.Marshal(msg)
 	err := c.MQCh.Publish("group", strconv.Itoa(int(msg.ToID)), false, false,
@@ -27,10 +29,10 @@ func (c *Client) PublishGroup(msg *Message) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("publish成功")
 	return nil
 }
 
+// PublishSystem 系统通知 Publish 处理函数
 func (s *SystemMQChan) PublishSystem(msg *Message) error {
 	data, _ := json.Marshal(&msg)
 	err := s.MQCh.Publish("system", strconv.Itoa(int(msg.ToID)), false, false,

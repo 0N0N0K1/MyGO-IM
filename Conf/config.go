@@ -50,7 +50,7 @@ type RedisConfig struct {
 }
 
 var Conf Config
-var DSN string
+var MySQLDSN string
 var MQURL string
 var UserAddr string
 var AdminAddr string
@@ -68,7 +68,7 @@ func LoadConfig() {
 		log.Fatal("Config Unmarshal error:", err)
 	}
 
-	DSN = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", Conf.M.User, Conf.M.Password, Conf.M.Host, Conf.M.Port, Conf.M.DB)
+	MySQLDSN = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", Conf.M.User, Conf.M.Password, Conf.M.Host, Conf.M.Port, Conf.M.DB)
 	MQURL = fmt.Sprintf("amqp://%s:%s@%s:%s/", Conf.MQ.User, Conf.MQ.Password, Conf.MQ.Host, Conf.MQ.Port)
 	UserAddr = fmt.Sprintf("%s:%s", Conf.Web.Host, Conf.Web.UserPort)
 	AdminAddr = fmt.Sprintf("%s:%s", Conf.Web.Host, Conf.Web.AdminPort)

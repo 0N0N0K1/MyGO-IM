@@ -12,8 +12,10 @@ type SystemMQChan struct {
 	MQCh *amqp091.Channel
 }
 
+// SystemMQ 系统使用的 AMQP 通道实例
 var SystemMQ SystemMQChan
 
+// SystemMQChanInit 初始化系统使用的 AMQP 通道
 func SystemMQChanInit() (err error) {
 	SystemMQ.MQCh, _, err = NewChannel()
 	if err != nil {
@@ -21,6 +23,8 @@ func SystemMQChanInit() (err error) {
 	}
 	return nil
 }
+
+// NewSystemMsg 返回系统消息实例
 func NewSystemMsg(payload, fromName, toName string, fromID, toID uint) *Message {
 	return &Message{
 		Method:    "system",
@@ -30,9 +34,11 @@ func NewSystemMsg(payload, fromName, toName string, fromID, toID uint) *Message 
 		ToName:    toName,
 		Payload:   payload,
 		Timestamp: time.Now().Unix(),
+		MsgID:     int64(SnowID.Generate()),
 	}
 }
 
+// SendFrdStatus 发送好友申请相关系统通知
 func SendFrdStatus(status, fromName, toName string, fromID, toID uint) {
 	var msg *Message
 	switch status {
@@ -54,6 +60,7 @@ func SendFrdStatus(status, fromName, toName string, fromID, toID uint) {
 
 }
 
+// SendGrpStatus 发送进群相关系统通知
 func SendGrpStatus(status, fromName, toName, groupName string, fromID, toID, groupID uint) {
 	var msg *Message
 	switch status {
@@ -74,7 +81,7 @@ func SendGrpStatus(status, fromName, toName, groupName string, fromID, toID, gro
 	}
 }
 
-// UnbindExchanger 用于当
+// UnbindExchanger 用于当退出群聊时解绑
 func UnbindExchanger(userID, groupID uint) error {
 	err := SystemMQ.MQCh.QueueUnbind(strconv.Itoa(int(userID)), strconv.Itoa(int(groupID)), "group", nil)
 	if err != nil {

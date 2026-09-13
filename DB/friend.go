@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-// UpdateFrdStatus  用于更新好友表中好友状态
+// UpdateFrdStatus  更新好友表中好友状态
 func UpdateFrdStatus(activeID, passiveID uint, status string) error {
 	var friendship = UserUser{
 		ActiveID:  activeID,
@@ -26,7 +26,7 @@ func UpdateFrdStatus(activeID, passiveID uint, status string) error {
 	return errors.New("no this status")
 }
 
-// QueryFrd SQL 查找好友（by id/nickname/all）
+// QueryFrd  查找好友
 func QueryFrd(ID uint, input any, option int) ([]User, error) {
 	var result = make([]User, 0)
 	var tmp User
@@ -61,7 +61,7 @@ func QueryFrd(ID uint, input any, option int) ([]User, error) {
 
 }
 
-// QueryFrdLimit SQL 查找好友 分页
+// QueryFrdLimit  分页查找好友
 func QueryFrdLimit(ID uint, page, limit int) []User {
 	var result = make([]User, 0)
 	MySQL.
@@ -70,7 +70,7 @@ func QueryFrdLimit(ID uint, page, limit int) []User {
 	return result
 }
 
-// DeleteFrd SQL 删除好友
+// DeleteFrd  删除好友
 func DeleteFrd(ID, frdID uint) error {
 	err := MySQL.Table("user_users").Where("((active_id=? and passive_id=?) or (active_id=? and passive_id=?)) and status='accept' ", ID, frdID, frdID, ID).Delete(&UserUser{}).Error
 	return err

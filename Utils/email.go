@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// SendAuthMail 发送验证码到指定邮箱
 func SendAuthMail(to string) error {
 	qqEmail := "3397545837@qq.com"
 	authCode := "xsxdeqfjsuoncigi"

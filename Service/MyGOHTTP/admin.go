@@ -67,7 +67,7 @@ func QueryMessage(c *gin.Context) {
 // ChangePassword 用于admin修改User密码API的处理函数
 func ChangePassword(c *gin.Context) {
 	userID := c.Query("id")
-	userNewPwd := c.Query("password")
+	userNewPwd := c.Query("new")
 	id, err := strconv.Atoi(userID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": err.Error()})
@@ -90,14 +90,14 @@ func ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Update password error"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": "0", "message": "Updated!", "user": user})
+	c.JSON(http.StatusOK, gin.H{"code": "0", "success": "Updated!", "user": user})
 }
 
 // BanUser 用于admin封禁/禁言用户
 func BanUser(c *gin.Context) {
-	userID := c.Query("id")
-	banTime := c.Query("time")
-	reason := c.Query("reason")
+	userID := c.Param("id")
+	banTime := c.Param("time")
+	reason := c.Param("reason")
 
 	t, err := strconv.Atoi(banTime)
 	if err != nil {
@@ -130,7 +130,7 @@ func QueryUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1003", "err": err.Error()})
 		return
 	}
-	user, err := DB.QueryUserWithInfo(uint(id))
+	user, err := DB.QueryUserWithInfo(uint(id), DB.ByID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Query user by ID error"})
 		return

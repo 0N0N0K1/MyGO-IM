@@ -10,9 +10,13 @@ import (
 	"log"
 )
 
+// MySQL 全局实例
 var MySQL *gorm.DB
+
+// RDB redis全局实例
 var RDB *redis.Client
 
+// InitRedis 初始化与MySQL连接
 func InitRedis() {
 	RDB = redis.NewClient(&redis.Options{
 		Addr:     Conf.Conf.R.Addr,
@@ -30,9 +34,10 @@ func InitRedis() {
 
 }
 
+// InitMySQL 初始化与Redis连接
 func InitMySQL() {
 	var err error
-	MySQL, err = gorm.Open(mysql.Open(Conf.DSN), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
+	MySQL, err = gorm.Open(mysql.Open(Conf.MySQLDSN), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
 	if err != nil {
 		log.Fatal("MySQL连接失败:", err)
 	}

@@ -7,8 +7,8 @@ import (
 	"net/http"
 )
 
+// WSUpgrade //升级HTTP为WS
 func WSUpgrade(c *gin.Context) {
-	//升级HTTP为WS
 	conn, err := MyGOWS.Upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println(err)

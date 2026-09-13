@@ -11,6 +11,7 @@ import (
 
 var MySecret = []byte(Conf.Conf.J.Secret)
 
+// CreateJWT 创建JWT
 func CreateJWT(userID uint) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
@@ -27,6 +28,8 @@ func CreateJWT(userID uint) (string, error) {
 	}
 	return tokenStr, nil
 }
+
+// VerifyJWT 验证JWT
 func VerifyJWT(token string) (string, bool) {
 	tokenParse, err := jwt.Parse(token, func(token *jwt.Token) (any, error) {
 		if token.Method == jwt.SigningMethodHS256 {

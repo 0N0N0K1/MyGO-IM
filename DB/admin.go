@@ -25,7 +25,7 @@ func UpdateUser(user *User) error {
 	return err
 }
 
-// QueryUser 查询用户关键信息（by name/id）
+// QueryUser 查询用户
 func QueryUser(input any, option int) ([]User, error) {
 	var result = make([]User, 0)
 	switch option {
@@ -42,14 +42,14 @@ func QueryUser(input any, option int) ([]User, error) {
 	return result, nil
 }
 
-// QueryUserWithInfo 查询用户关键与详细信息（by name/id）
-func QueryUserWithInfo(input any) (DetailInfo, error) {
+// QueryUserWithInfo 查询用户关键与详细信息
+func QueryUserWithInfo(input any, option int) (DetailInfo, error) {
 	var result DetailInfo
-	switch input.(type) {
-	case uint:
+	switch option {
+	case ByID:
 		MySQL.Raw("select * from users a,user_infos b where a.id=b.user_id and a.id =?", input).First(&result)
-	case string:
-		MySQL.Raw("select * from users a,user_infos b where a.id=b.user_id and a.name =?", input).First(&result)
+	case ByEmail:
+		MySQL.Raw("select * from users a,user_infos b where a.id=b.user_id and a.email =?", input).First(&result)
 	default:
 		return DetailInfo{}, errors.New("input type error")
 	}
@@ -87,7 +87,7 @@ func GetFresherToday() uint {
 	return num
 }
 
-// AdminBanUserHelper 用于admin永久或者暂时全局禁言用户
+// AdminBanUserHelper admin永久或者暂时全局禁言用户
 func AdminBanUserHelper(userID uint, t int, reason string) error {
 	if t <= 0 {
 		err := MySQL.Table("users").Where("id=?", userID).Delete(&User{}).Error
@@ -101,7 +101,7 @@ func AdminBanUserHelper(userID uint, t int, reason string) error {
 	return err
 }
 
-// QueryIfBan 用于查询是否被禁言
+// QueryIfBan 查询是否被admin全局禁言
 func QueryIfBan(userID uint) (ban bool, reason string, t time.Duration) {
 	user := fmt.Sprintf("admin:slience:%d", userID)
 	cmd := RDB.Get(context.TODO(), user)
@@ -114,7 +114,7 @@ func QueryIfBan(userID uint) (ban bool, reason string, t time.Duration) {
 	return true, reason, t
 }
 
-// OwnerBanUserHelper 用于owner永久或者暂时全局禁言用户
+// OwnerBanUserHelper 群主永久或者暂时全局禁言用户
 func OwnerBanUserHelper(userID, groupID uint, t time.Duration) error {
 	if t <= 0 {
 		err := MySQL.Table("users").Where("id=?", userID).Delete(&User{}).Error
@@ -128,7 +128,7 @@ func OwnerBanUserHelper(userID, groupID uint, t time.Duration) error {
 	return err
 }
 
-// QueryIfSilence 用于查询是否被禁言
+// QueryIfSilence 查询是否被群主禁言
 func QueryIfSilence(userID, groupID uint) (ban bool, t time.Duration) {
 	user := fmt.Sprintf("groups:%d:silence:%d", groupID, userID)
 	cmd := RDB.Get(context.TODO(), user)
@@ -138,4 +138,17 @@ func QueryIfSilence(userID, groupID uint) (ban bool, t time.Duration) {
 	cmd2 := RDB.TTL(context.TODO(), user)
 	t, _ = cmd2.Result()
 	return true, t
+}
+
+// DeleteUser 删除用户
+func DeleteUser(userID uint) error {
+	err := MySQL.Table("user_infos").Where("user_id=?", userID).Delete(&UserInfo{}).Error
+	if err != nil {
+		return err
+	}
+	err = MySQL.Table("users").Where("id=?", userID).Delete(&User{}).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }
