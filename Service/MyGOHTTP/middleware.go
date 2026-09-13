@@ -25,8 +25,8 @@ func VerifyJWT(c *gin.Context) {
 		return
 	}
 	users, err := DB.QueryUser(uid, DB.ByID)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "QueryUser: " + err.Error()})
+	if err != nil || len(users) == 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "No user "})
 		c.Abort()
 		return
 	}

@@ -5,7 +5,7 @@ import (
 	"MyGO-IM/Service/MyGOWS"
 
 	"github.com/gin-gonic/gin"
-	
+
 	"net/http"
 	"strconv"
 	"time"
@@ -70,7 +70,7 @@ func EnterGroup(c *gin.Context) {
 	gName, _ := c.Get("gName")
 	ownerName, _ := c.Get("ownerName")
 	ownerID, _ := c.Get("ownerID")
-	applicantID := c.Query("applicant")
+	applicantID := c.Query("id")
 	status := c.Query("status")
 	switch status {
 	case "pending":
@@ -107,7 +107,7 @@ func EnterGroup(c *gin.Context) {
 		MyGOWS.SendGrpStatus(status, ownerName.(string), user[0].Name, gName.(string), ownerID.(uint), user[0].ID, gID.(uint))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Enter Group successfully"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "successfully " + status})
 }
 
 // ExitGroup 退出群的处理函数

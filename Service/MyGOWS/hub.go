@@ -255,43 +255,49 @@ func (c *Client) WriteHandler(message []byte) {
 		_ = c.Conn.WriteMessage(websocket.TextMessage, message)
 		c.AckReady <- true
 		return
-	default:
+	case "group":
+		if !Utils.Dedup(c.ID, msg.MsgID, msg.Seq) {
+			log.Printf("repeat")
+			c.AckReady <- true
+			return
+		}
+
+		readSeq := DB.GetGroupReadSeq(msg.ToID, c.ID)
+		if readSeq != msg.Seq {
+			log.Println(readSeq, msg.Seq)
+			log.Println("readSeq != msg.Seq")
+			c.AckReady <- false
+			return
+		}
+		err = c.Conn.WriteMessage(websocket.TextMessage, message)
+		if err != nil {
+			log.Println("WriteMessage err")
+			c.AckReady <- false
+			return
+		}
+		DB.IncrGroupReadSeq(msg.ToID, c.ID, DB.GetGroupReadSeq(msg.ToID, c.ID)+1)
+
+	case "private":
 		if !Utils.Dedup(msg.ToID, msg.MsgID, msg.Seq) {
 			log.Printf("repeat")
 			c.AckReady <- true
 			return
 		}
-		switch msg.Method {
-		case "group":
-			readSeq := DB.GetGroupReadSeq(msg.ToID, msg.FromID)
-			if readSeq != msg.Seq {
-				c.AckReady <- false
-				return
-			}
-			err = c.Conn.WriteMessage(websocket.TextMessage, message)
-			if err != nil {
-				c.AckReady <- false
-				return
-			}
-			DB.IncrGroupReadSeq(msg.ToID, c.ID, DB.GetGroupWriterSeq(msg.ToID)+1)
-		case "private":
-			readSeq, _ := DB.GetPrivateSeq(msg.ToID, msg.FromID)
-			if readSeq != msg.Seq {
-				log.Println(readSeq)
-				log.Println("readSeq != msg.Seq")
-				c.AckReady <- false
-				return
-			}
-			err = c.Conn.WriteMessage(websocket.TextMessage, message)
-			if err != nil {
-				log.Printf("WriteMessage+:" + err.Error())
-				c.AckReady <- false
-				return
-			}
-			DB.IncrPrivateReadSeq(msg.ToID, msg.FromID, msg.Seq+1)
+		readSeq, _ := DB.GetPrivateSeq(msg.ToID, msg.FromID)
+		if readSeq != msg.Seq {
+			log.Println(readSeq)
+			log.Println("readSeq != msg.Seq")
+			c.AckReady <- false
+			return
 		}
-		c.AckReady <- true
-
+		err = c.Conn.WriteMessage(websocket.TextMessage, message)
+		if err != nil {
+			log.Printf("WriteMessage+:" + err.Error())
+			c.AckReady <- false
+			return
+		}
+		DB.IncrPrivateReadSeq(msg.ToID, msg.FromID, msg.Seq+1)
 	}
+	c.AckReady <- true
 
 }
