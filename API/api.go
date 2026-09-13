@@ -22,6 +22,8 @@ func InitRouters() {
 	Users := ServiceEngine.Group("/users/:ID")
 	Users.Use(MyGOHTTP.VerifyJWT)
 	{
+
+		Users.DELETE("/", MyGOHTTP.DropUser)
 		// 通过 Query 传ID增删查
 		Users.GET("/friends", MyGOHTTP.GetFriends)
 		Users.POST("/friends", MyGOHTTP.AddFriend)

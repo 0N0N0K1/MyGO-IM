@@ -1,6 +1,8 @@
 package DB
 
-import "errors"
+import (
+	"errors"
+)
 
 // UpdateGrpStatus 插入成员表记录
 func UpdateGrpStatus(memberID, groupID uint, status string) (err error) {
@@ -20,6 +22,7 @@ func UpdateGrpStatus(memberID, groupID uint, status string) (err error) {
 	case "accept":
 		err = MySQL.Table("group_users").Updates(&member).Error
 		return err
+
 	}
 	return errors.New("no this status")
 }

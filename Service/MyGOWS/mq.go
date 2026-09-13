@@ -4,6 +4,7 @@ import (
 	"MyGO-IM/Conf"
 	"github.com/rabbitmq/amqp091-go"
 	"log"
+	"strconv"
 )
 
 var Conn *amqp091.Connection
@@ -41,4 +42,32 @@ func NewChannel() (*amqp091.Channel, chan amqp091.Confirmation, error) {
 	err = channel.Confirm(false)
 	confirms := channel.NotifyPublish(make(chan amqp091.Confirmation, 100))
 	return channel, confirms, nil
+}
+
+func RegisterNewBind(userID uint) error {
+
+	//声明收消息的队列
+	q, err := SystemMQ.MQCh.QueueDeclare(strconv.Itoa(int(userID)), true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+	//将队列绑定到交换机上
+	err = SystemMQ.MQCh.QueueBind(q.Name, strconv.Itoa(int(userID)), "private", false, nil)
+	if err != nil {
+		return err
+	}
+
+	err = SystemMQ.MQCh.QueueBind(q.Name, strconv.Itoa(int(userID)), "system", false, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func GroupNewBind(userID, groupID uint) error {
+	//声明收消息的队列
+	err := SystemMQ.MQCh.QueueBind(strconv.Itoa(int(userID)), strconv.Itoa(int(groupID)), "group", false, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }

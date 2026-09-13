@@ -253,7 +253,6 @@ func (c *Client) WriteHandler(message []byte) {
 	switch msg.Method {
 	case "system":
 		_ = c.Conn.WriteMessage(websocket.TextMessage, message)
-		c.AckReady <- true
 		return
 	case "group":
 		if !Utils.Dedup(c.ID, msg.MsgID, msg.Seq) {

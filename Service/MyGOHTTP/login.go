@@ -2,6 +2,7 @@ package MyGOHTTP
 
 import (
 	"MyGO-IM/DB"
+	"MyGO-IM/Service/MyGOWS"
 	"MyGO-IM/Utils"
 	"context"
 	"github.com/gin-gonic/gin"
@@ -104,6 +105,11 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "CreateJWT: " + err.Error()})
 		return
 	}
+	err = MyGOWS.RegisterNewBind(user[0].ID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "RegisterNewBind: " + err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Register successfully!", "token": token})
 
 }
@@ -147,4 +153,7 @@ func AuthCode(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Auth code is sent!"})
 	}
+}
+func DropUser(c *gin.Context) {
+
 }
