@@ -1,11 +1,8 @@
 package MyGOHTTP
 
 import (
-	"MyGO-IM/Service/MyGOWS"
 	"MyGO-IM/Utils"
 	"context"
-	"encoding/json"
-
 	"github.com/gin-gonic/gin"
 
 	"MyGO-IM/DB"
@@ -43,25 +40,25 @@ func GetBasicInfo(c *gin.Context) {
 
 // QueryMessage 用于admin获取聊天记录API的处理函数
 func QueryMessage(c *gin.Context) {
-	userid := c.Query("id")
-	msgType := c.Query("type")
-	parseUint, err := strconv.ParseUint(userid, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": "1001", "error": "ID can't parse"})
-		return
-	}
-	msgs, err := DB.QueryUserMsg(uint(parseUint), msgType)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": "1001", "error": "Type can't search"})
-		return
-	}
-	var messages = make([]MyGOWS.Message, 1)
-	var message MyGOWS.Message
-	for _, msg := range msgs {
-		_ = json.Unmarshal([]byte(msg.Content), &message)
-		messages = append(messages, message)
-	}
-	c.JSON(http.StatusOK, gin.H{"code": "0", "messages": messages, "err": err})
+	//	userid := c.Query("id")
+	//	msgType := c.Query("type")
+	//	parseUint, err := strconv.ParseUint(userid, 10, 32)
+	//	if err != nil {
+	//		c.JSON(http.StatusOK, gin.H{"code": "1001", "error": "ID can't parse"})
+	//		return
+	//	}
+	//	msgs, err := DB.QueryUserMsg(uint(parseUint), msgType)
+	//	if err != nil {
+	//		c.JSON(http.StatusOK, gin.H{"code": "1001", "error": "Type can't search"})
+	//		return
+	//	}
+	//	var messages = make([]MyGOWS.Message, 1)
+	//	var message MyGOWS.Message
+	//	for _, msg := range msgs {
+	//		_ = json.Unmarshal([]byte(msg.Content), &message)
+	//		messages = append(messages, message)
+	//	}
+	//	c.JSON(http.StatusOK, gin.H{"code": "0", "messages": messages, "err": err})
 }
 
 // ChangePassword 用于admin修改User密码API的处理函数

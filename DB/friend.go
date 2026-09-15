@@ -62,12 +62,16 @@ func QueryFrd(ID uint, input any, option int) ([]User, error) {
 }
 
 // QueryFrdLimit  分页查找好友
-func QueryFrdLimit(ID uint, page, limit int) []User {
+func QueryFrdLimit(ID uint, page, limit int) (Pagination, error) {
 	var result = make([]User, 0)
-	MySQL.
+	err := MySQL.
 		Raw("select b.name, b.id, b.last_online from users a,users b,user_users c where c.status='accept' and a.id=? and ((a.id=c.active_id and b.id =c.passive_id) or  (b.id=c.active_id and a.id =c.passive_id)) limit ? offset ?", ID, limit, page*limit).
-		Find(&result)
-	return result
+		Find(&result).Error
+	return Pagination{
+		Page:  page,
+		Limit: limit,
+		List:  result,
+	}, err
 }
 
 // DeleteFrd  删除好友

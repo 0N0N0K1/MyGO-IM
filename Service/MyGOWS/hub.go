@@ -248,10 +248,7 @@ func (c *Client) ConfirmHandler() {
 			case "private":
 				DB.IncrPrivateWriteSeq(msg.FromID, msg.ToID, msg.Seq+1)
 			}
-
 			c.SendReady <- struct{}{}
-			log.Printf("tag: %d  %v 已存入mysql", ack.DeliveryTag, msg)
-
 		} else {
 			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
 			result, err := cmd.Result()

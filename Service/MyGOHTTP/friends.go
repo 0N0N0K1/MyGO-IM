@@ -19,7 +19,7 @@ func GetFriends(c *gin.Context) {
 	if frdID != "" {
 		fID, err := strconv.Atoi(frdID)
 		if err != nil || fID <= 0 {
-			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "String2int error"})
+			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "ID invalid"})
 			return
 		}
 		frds, err := DB.QueryFrd(userID.(uint), fID, DB.ByID)
@@ -36,35 +36,18 @@ func GetFriends(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ByName!", "friends": frds})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "type": "ByName", "friends": frds})
 		return
 	}
-	if limit != "" {
-		l, err := strconv.Atoi(limit)
-		if err != nil || l < 0 {
-			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "String2int error"})
-			return
-		}
-		if page == "" {
-			frds := DB.QueryFrdLimit(userID.(uint), 0, l)
-			c.JSON(http.StatusOK, gin.H{"code": 0, "type": "limit", "friends": frds})
-			return
-		}
-		p, err := strconv.Atoi(page)
-		if err != nil || p < 0 {
-			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "string2int error"})
-			return
-		}
-		frds := DB.QueryFrdLimit(userID.(uint), p, l)
-		c.JSON(http.StatusOK, gin.H{"code": 0, "type": "limit!", "friends": frds})
-		return
-	}
-	frds, err := DB.QueryFrd(userID.(uint), nil, DB.ALL)
+	l, _ := strconv.Atoi(limit)
+	p, _ := strconv.Atoi(page)
+	result, err := DB.QueryFrdLimit(userID.(uint), p, l)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 0, "type": "ALL", "friends": frds})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "type": "limit", "result": result})
+	return
 }
 
 // AddFriend 添加好友的处理函数，提供通过 query id 添加好友

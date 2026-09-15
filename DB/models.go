@@ -76,21 +76,23 @@ type GroupUser struct {
 	User      *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 type GroupMessage struct {
-	ID      uint `gorm:"primaryKey"`
-	Seq     uint64
-	ToID    uint
-	FromID  uint
-	Content string `gorm:"type:text"`
+	ID        uint `gorm:"primaryKey"`
+	Seq       uint64
+	ToID      uint
+	FromID    uint
+	Content   string    `gorm:"type:text"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
 
 	To   *Group `gorm:"foreignKey:ToID;references:ID;constraint:OnDelete:CASCADE"  json:"-"`
 	From *User  `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE"  json:"-"`
 }
 type PrivateMessage struct {
-	ID      uint `gorm:"primaryKey"`
-	Seq     uint64
-	ToID    uint
-	FromID  uint
-	Content string `gorm:"type:text"`
+	ID        uint `gorm:"primaryKey"`
+	Seq       uint64
+	ToID      uint
+	FromID    uint
+	Content   string    `gorm:"type:text"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
 
 	To   *User `gorm:"foreignKey:ToID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 	From *User `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE" json:"-"`

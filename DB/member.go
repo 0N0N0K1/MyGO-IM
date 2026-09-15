@@ -27,19 +27,22 @@ func UpdateGrpStatus(memberID, groupID uint, status string) (err error) {
 	return errors.New("no this status")
 }
 
-func QueryMemberAll(groupID uint) []User {
+// QueryMemberAll 查找返回群成员列表
+func QueryMemberAll(groupID uint, page, limit int) (Pagination, error) {
 	var result []User
 
-	if groupID == 0 {
-		return result
-	}
-	MySQL.
-		Raw("select a.name, a.id from users a,`groups` b,group_users c where  b.id=? and b.id=c.group_id and a.id=c.user_id ",
-			groupID).
-		Find(&result)
-	return result
+	err := MySQL.
+		Raw("select a.*from users a,`groups` b,group_users c where  b.id=? and b.id=c.group_id and a.id=c.user_id limit ? offset ?",
+			groupID, limit, page*limit).
+		Find(&result).Error
+	return Pagination{
+		Page:  page,
+		Limit: limit,
+		List:  result,
+	}, err
 }
 
+// QueryMember 查找返回一个群成员
 func QueryMember(userID, groupID uint) User {
 	var result User
 	MySQL.

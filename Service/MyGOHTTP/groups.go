@@ -143,8 +143,16 @@ func ExitGroup(c *gin.Context) {
 // GetMembers 查看所有群成员的处理函数
 func GetMembers(c *gin.Context) {
 	gID, _ := c.Get("gID")
-	result := DB.QueryMemberAll(gID.(uint))
-	c.JSON(http.StatusOK, gin.H{"code": "005", "msg": "Successful!", "members": result})
+	limit := c.Query("limit")
+	page := c.Query("page")
+	l, _ := strconv.Atoi(limit)
+	p, _ := strconv.Atoi(page)
+	result, err := DB.QueryMemberAll(gID.(uint), p, l)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1005, "error": "QueryMember error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "result": result})
 }
 
 // KickOutMember 踢人出群的处理函数
@@ -206,4 +214,20 @@ func DoNotSpeak(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "Silence member successfully"})
+}
+
+// GetGroups 查询已加入的群聊
+func GetGroups(c *gin.Context) {
+	actorID, _ := c.Get("actorID")
+	limit := c.Query("limit")
+	page := c.Query("page")
+	l, _ := strconv.Atoi(limit)
+	p, _ := strconv.Atoi(page)
+	result, err := DB.QueryJoinGroup(actorID.(uint), p, l)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "result": result})
+	return
 }

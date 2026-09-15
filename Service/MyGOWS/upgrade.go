@@ -2,7 +2,6 @@ package MyGOWS
 
 import (
 	"MyGO-IM/Conf"
-	"MyGO-IM/DB"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"strconv"
@@ -31,23 +30,23 @@ func InitChat(userName string, userID uint, conn *websocket.Conn) error {
 		return err
 	}
 	//将队列绑定到交换机上
-	err = ch.QueueBind(q.Name, strconv.Itoa(int(userID)), "private", false, nil)
-	if err != nil {
-		return err
-	}
-	groups := DB.QueryMyGroup(userID)
-	for _, group := range groups {
-		if group.ID != 0 {
-			err = ch.QueueBind(q.Name, strconv.Itoa(int(group.ID)), "group", false, nil)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	err = ch.QueueBind(q.Name, strconv.Itoa(int(userID)), "system", false, nil)
-	if err != nil {
-		return err
-	}
+	//err = ch.QueueBind(q.Name, strconv.Itoa(int(userID)), "private", false, nil)
+	//if err != nil {
+	//	return err
+	//}
+	//groups := DB.QueryMyGroup(userID)
+	//for _, group := range groups {
+	//	if group.ID != 0 {
+	//		err = ch.QueueBind(q.Name, strconv.Itoa(int(group.ID)), "group", false, nil)
+	//		if err != nil {
+	//			return err
+	//		}
+	//	}
+	//}
+	//err = ch.QueueBind(q.Name, strconv.Itoa(int(userID)), "system", false, nil)
+	//if err != nil {
+	//	return err
+	//}
 
 	// 从对象池中Get一个Client实例注册，加入Hub管理
 	client := H.ClientPool.Get().(*Client)
