@@ -2,7 +2,6 @@ package MyGOWS
 
 import (
 	"github.com/gorilla/websocket"
-	"github.com/rabbitmq/amqp091-go"
 	"sync"
 )
 
@@ -18,7 +17,9 @@ type ServerACK struct {
 	MsgID          int64  `json:"msg_id"`
 	Resend         bool   `json:"resend"`
 	Desc           string `json:"describe"`
+	ToId           uint   `json:"to_id"`
 	ReplyID        int64  `json:"reply_id"`
+	Method         string `json:"method"`
 }
 type ClientMessage struct {
 	Cmd            string `json:"cmd"`
@@ -49,14 +50,11 @@ type Client struct {
 	Close       chan struct{}
 	ID          uint
 	Name        string
-	Confirm     chan amqp091.Confirmation
-	AckReady    chan struct{}    //消息拉取Send完成（成功/失败）后通知consume Ack/Nack的Chan
-	ExpertSeq   uint             //本次希望consume并send的消息seq
-	DisorderMag []ServerMessage  // 存放乱序到达的Msg
-	Conn        *websocket.Conn  // WS连接
-	Queue       amqp091.Queue    // 客户端持有的队列
-	MQCh        *amqp091.Channel // 客户端持有的AMQP信道
-	Send        chan []byte      // 发送消息队列
+	AckReady    chan struct{}   //消息拉取Send完成（成功/失败）后通知consume Ack/Nack的Chan
+	ExpertSeq   uint            //本次希望consume并send的消息seq
+	DisorderMag []ServerMessage // 存放乱序到达的Msg
+	Conn        *websocket.Conn // WS连接
+	Send        chan []byte     // 发送消息队列
 	Hub         *Hub
 	SendFunc    func(msg *ServerMessage) // 发送消息用的函数
 }

@@ -35,3 +35,7 @@ rabbitMQ:
   user: guest
   password: guest
 
+
+worker:
+  consumer: 64
+  producer: 32

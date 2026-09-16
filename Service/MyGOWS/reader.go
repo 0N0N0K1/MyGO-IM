@@ -108,14 +108,15 @@ func (c *Client) MsgSender() func(msg *ServerMessage) {
 }
 
 func (c *Client) SendPrivate(msg *ServerMessage, deliveryTag uint64, online bool) bool {
-
+	producer := ProducerPool.Get()
+	defer ProducerPool.Put(producer)
 	// 判断是否为好友,拿到发送的Seq
 	_, writeSeq := DB.GetPrivateSeq(msg.FromID, msg.ToID)
 	if writeSeq != 0 {
 		msg.Seq = writeSeq
 	} else {
-		ACK := NewServerACK("nack", "对方不是你的好友", msg.ReplyID, false)
-		SystemMQ.PublishServerACK(ACK, msg.FromID)
+		ACK := NewServerACK("nack", "对方不是你的好友", msg.ReplyID, msg.FromID, false)
+		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
 	marshal, _ := json.Marshal(&msg)
@@ -124,31 +125,32 @@ func (c *Client) SendPrivate(msg *ServerMessage, deliveryTag uint64, online bool
 	// 消息入库	// writeSeq+1
 	err := DB.InsertMsg(msg.FromID, msg.ToID, msg.Seq, msg.Method, string(marshal))
 	if err != nil {
-		ACK := NewServerACK("nack", "持久化失败", msg.ReplyID, false)
-		SystemMQ.PublishServerACK(ACK, msg.FromID)
+		ACK := NewServerACK("nack", "持久化失败", msg.ReplyID, msg.FromID, false)
+		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
 	DB.IncrPrivateWriteSeq(msg.FromID, msg.ToID, msg.Seq+1)
 
 	if online {
 		// 在线 Publish 到私聊交换机
-		err = c.PublishPrivate(msg)
+		err = producer.PublishHandler(msg, msg.ConversationId)
 		// Publish失败通知
 		if err != nil {
-			ACK := NewServerACK("nack", "publish error", msg.ReplyID, true)
-			SystemMQ.PublishServerACK(ACK, msg.FromID)
+			ACK := NewServerACK("nack", "publish error", msg.ReplyID, msg.FromID, true)
+			producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 			return false
 		}
+		data, _ := json.Marshal(msg)
 		DB.RDB.HSet(context.TODO(), Utils.UsersIdSent(c.ID), msg.ReplyID, msg.ReplyID)
-		DB.RDB.Set(context.TODO(), Utils.UsersIdSentTag(deliveryTag, c.ID), msg.ReplyID, 20*time.Minute)
+		DB.RDB.HSet(context.TODO(), Utils.UsersIdSentTag(deliveryTag, producer.ID), msg.ReplyID, data)
 		return true
 	} else {
 
 		// 缓存到Redis
 		DB.RDB.HSet(context.TODO(), Utils.UsersIdSent(c.ID), msg.ReplyID, msg.MsgID)
 		// ack
-		ACK := NewServerACK("ack", "ok", msg.ReplyID, false)
-		SystemMQ.PublishServerACK(ACK, msg.FromID)
+		ACK := NewServerACK("ack", "ok", msg.ReplyID, msg.FromID, false)
+		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return true
 
 	}
@@ -157,19 +159,20 @@ func (c *Client) SendPrivate(msg *ServerMessage, deliveryTag uint64, online bool
 
 // SendGroup publish到群聊交换机
 func (c *Client) SendGroup(msg *ServerMessage, deliveryTag uint64) bool {
-
+	producer := ProducerPool.Get()
+	defer ProducerPool.Put(producer)
 	// 判断发送者是否为群成员
 	if DB.QueryMember(msg.FromID, msg.ToID).ID == 0 {
-		ACK := NewServerACK("nack", "你不是群成员", msg.ReplyID, false)
-		SystemMQ.PublishServerACK(ACK, msg.FromID)
+		ACK := NewServerACK("nack", "你不是群成员", msg.ReplyID, msg.FromID, false)
+		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
 	// 判断发送者是否被禁言
 	ban, t := DB.QueryIfSilence(msg.FromID, msg.ToID)
 	if ban {
 		content := fmt.Sprintf("你已被禁言，剩余解禁时间%v", t)
-		ACK := NewServerACK("nack", content, msg.ReplyID, false)
-		SystemMQ.PublishServerACK(ACK, msg.FromID)
+		ACK := NewServerACK("nack", content, msg.ReplyID, msg.FromID, false)
+		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
 	marshal, _ := json.Marshal(&msg)
@@ -179,23 +182,23 @@ func (c *Client) SendGroup(msg *ServerMessage, deliveryTag uint64) bool {
 	msg.Seq = DB.GetGroupWriterSeq(msg.ToID)
 	err := DB.InsertMsg(msg.FromID, msg.ToID, msg.Seq, msg.Method, string(marshal))
 	if err != nil {
-		ACK := NewServerACK("nack", "持久化失败", msg.ReplyID, false)
-		SystemMQ.PublishServerACK(ACK, msg.FromID)
+		ACK := NewServerACK("nack", "持久化失败", msg.ReplyID, msg.FromID, false)
+		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
 	DB.IncrGroupWriteSeq(msg.ToID, msg.Seq+1)
 
 	// Publish到群聊交换机
-	err = c.PublishGroup(msg)
+	err = producer.PublishHandler(msg, msg.ConversationId)
 	// Publish失败通知
 	if err != nil {
-		ACK := NewServerACK("nack", "publish error", msg.ReplyID, true)
-		SystemMQ.PublishServerACK(ACK, msg.FromID)
+		ACK := NewServerACK("nack", "publish error", msg.ReplyID, msg.FromID, true)
+		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
 	// 缓存到Redis
 	data, _ := json.Marshal(msg)
 	DB.RDB.HSet(context.TODO(), Utils.UsersIdSent(c.ID), msg.ReplyID, msg.MsgID)
-	DB.RDB.HSet(context.TODO(), Utils.UsersIdSentTag(deliveryTag, c.ID), msg.ReplyID, data)
+	DB.RDB.HSet(context.TODO(), Utils.UsersIdSentTag(deliveryTag, producer.ID), msg.ReplyID, data)
 	return true
 }

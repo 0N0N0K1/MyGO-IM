@@ -7,12 +7,17 @@ import (
 )
 
 type Config struct {
-	M   MySQLConfig `mapstructure:"mysql"`
-	R   RedisConfig `mapstructure:"redis"`
-	J   JWTConfig   `mapstructure:"JWT"`
-	W   WSConfig    `mapstructure:"WS"`
-	MQ  MQConfig    `mapstructure:"rabbitMQ"`
-	Web WebConfig   `mapstructure:"web"`
+	M      MySQLConfig `mapstructure:"mysql"`
+	R      RedisConfig `mapstructure:"redis"`
+	J      JWTConfig   `mapstructure:"JWT"`
+	W      WSConfig    `mapstructure:"WS"`
+	MQ     MQConfig    `mapstructure:"rabbitMQ"`
+	Web    WebConfig   `mapstructure:"web"`
+	Worker Worker      `mapstructure:"worker"`
+}
+type Worker struct {
+	Consumer int `mapstructure:"consumer"`
+	Producer int `mapstructure:"producer"`
 }
 type WebConfig struct {
 	Host      string `mapstructure:"host"`

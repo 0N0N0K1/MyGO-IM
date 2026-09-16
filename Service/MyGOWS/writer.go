@@ -2,10 +2,8 @@ package MyGOWS
 
 import (
 	"MyGO-IM/DB"
-	"MyGO-IM/Utils"
 	"encoding/json"
 	"github.com/gorilla/websocket"
-	"log"
 	"time"
 )
 
@@ -43,7 +41,6 @@ func (c *Client) WriteHandler(message []byte) {
 	defer c.Hub.ServerMsgPool.Put(msg)
 	err := json.Unmarshal(message, msg)
 	if err != nil {
-		c.AckReady <- struct{}{}
 		return
 	}
 	switch msg.Method {
@@ -51,37 +48,26 @@ func (c *Client) WriteHandler(message []byte) {
 		_ = c.Conn.WriteMessage(websocket.TextMessage, message)
 		return
 	case "group":
-		if !Utils.Dedup(c.ID, msg.MsgID, msg.Seq) {
-			log.Printf("repeat")
-			c.AckReady <- struct{}{}
-			return
-		}
 		readSeq := DB.GetGroupReadSeq(msg.ToID, c.ID)
 		if readSeq > msg.Seq {
-			c.AckReady <- struct{}{}
 			return
 		}
 		err = c.Conn.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
-			c.AckReady <- struct{}{}
 			return
 		}
 		DB.IncrGroupReadSeq(msg.ToID, c.ID, DB.GetGroupReadSeq(msg.ToID, c.ID)+1)
 
 	case "private":
-		if !Utils.Dedup(msg.ToID, msg.MsgID, msg.Seq) {
-			log.Printf("repeat")
-			c.AckReady <- struct{}{}
+		readSeq, _ := DB.GetPrivateSeq(msg.ToID, msg.FromID)
+		if readSeq > msg.Seq {
 			return
 		}
-
 		err = c.Conn.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
-			c.AckReady <- struct{}{}
 			return
 		}
 		DB.IncrPrivateReadSeq(msg.ToID, msg.FromID, msg.Seq+1)
 	}
-	c.AckReady <- struct{}{}
 
 }

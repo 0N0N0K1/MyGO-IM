@@ -2,6 +2,7 @@ package Utils
 
 import (
 	"MyGO-IM/DB"
+
 	"context"
 	"errors"
 	"fmt"
@@ -17,21 +18,20 @@ func UsersIdSent(userID uint) string {
 }
 
 // UsersIdSentTag 返回 users:<id>:sent:<tag> 键名
-func UsersIdSentTag(deliverTag uint64, userID uint) string {
-	return fmt.Sprintf("user:%s:sent:%s", strconv.Itoa(int(userID)), strconv.Itoa(int(deliverTag)))
+func UsersIdSentTag(deliverTag uint64, workerID int) string {
+	return fmt.Sprintf("tag:%s:worker:%s", strconv.Itoa(int(deliverTag)), strconv.Itoa(workerID))
 }
 
 // CacheDedupMsgID 返回最近收到消息缓存msgID的键名
-func CacheDedupMsgID(userID uint, msgID int64) string {
-	return fmt.Sprintf("user:%s:dedup:%s", strconv.Itoa(int(userID)), strconv.Itoa(int(msgID)))
+func CacheDedupMsgID(userID uint) string {
+	return fmt.Sprintf("consumed:%s", strconv.Itoa(int(userID)))
 }
 
 // Dedup 用于使用 msgID 判断是否已经处理过
-func Dedup(userID uint, msgID int64, seq uint64) bool {
+func Dedup(ID uint, msgID int64) bool {
 
 	// 1. 判重
-	_, err := DB.RDB.ZScore(context.TODO(), CacheDedupMsgID(userID, msgID), strconv.FormatInt(msgID, 10)).Result()
-	log.Println(CacheDedupMsgID(userID, msgID) + "    " + strconv.FormatInt(msgID, 10))
+	_, err := DB.RDB.ZScore(context.TODO(), CacheDedupMsgID(ID), strconv.FormatInt(msgID, 10)).Result()
 	if err == nil {
 		log.Println("err==nil")
 		return false // 已存在
@@ -40,21 +40,22 @@ func Dedup(userID uint, msgID int64, seq uint64) bool {
 		log.Println("not nil err:" + err.Error())
 		return false
 	}
-
 	// 2. 插入
-	if err = DB.RDB.ZAdd(context.TODO(), CacheDedupMsgID(userID, msgID), redis.Z{Score: float64(seq), Member: strconv.FormatInt(msgID, 10)}).Err(); err != nil {
+	if err = DB.RDB.ZAdd(context.TODO(), CacheDedupMsgID(ID), redis.Z{Score: float64(time.Now().Unix()), Member: strconv.FormatInt(msgID, 10)}).Err(); err != nil {
 		log.Println("ZAdd err:" + err.Error())
 		return false
 	}
 
-	// 3. 裁剪到 20 条
-	if err = DB.RDB.ZRemRangeByRank(context.TODO(), CacheDedupMsgID(userID, msgID), 0, -21).Err(); err != nil {
-		log.Println("ZRemRangeByRank err:" + err.Error())
-		return false
-	}
+	DB.RDB.Expire(context.TODO(), CacheDedupMsgID(ID), 24*time.Hour)
 
-	// 4. 刷新 TTL
-	DB.RDB.Expire(context.TODO(), CacheDedupMsgID(userID, msgID), 24*time.Hour)
-	log.Println("return Ture")
+	// 3. 裁剪到 20 条
+	result, _ := DB.RDB.ZCard(context.TODO(), CacheDedupMsgID(ID)).Result()
+	if result < 100 {
+		return true
+	}
+	if err = DB.RDB.ZRemRangeByRank(context.TODO(), CacheDedupMsgID(ID), 0, -21).Err(); err != nil {
+		log.Println("ZRemRangeByRank err:" + err.Error())
+	}
 	return true
+
 }

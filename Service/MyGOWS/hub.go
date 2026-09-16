@@ -90,7 +90,6 @@ func (h *Hub) Run() {
 // OfflineHandler 下线后的处理
 func OfflineHandler(client *Client) {
 	close(client.Close)                   //关闭通道，通知子协程死亡
-	client.MQCh.Close()                   //关闭AMQP信道，防止出现僵尸消费者
 	DB.SetOffline(client.ID)              //删除Redis缓存中在线记录
 	DB.SetLastOnline(client.ID)           //设置下线时间
 	delete(client.Hub.Clients, client.ID) //从Hub中删除对应Client连接
@@ -105,6 +104,5 @@ func OnlineHandler(client *Client) {
 	//开辟 读+写goroutine、消费消息的goroutine
 	go client.WritePump()
 	go client.ReadPump()
-	go client.ConsumeMyQueue()
 	go client.ConfirmHandler()
 }

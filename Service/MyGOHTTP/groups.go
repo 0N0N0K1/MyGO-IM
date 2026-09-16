@@ -107,14 +107,7 @@ func EnterGroup(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "UpdateGrpStatus: " + err.Error()})
 			return
 		}
-		if status == "accept" {
-			err = MyGOWS.GroupNewBind(uint(aplID), gID.(uint))
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "GroupNewBind: " + err.Error()})
-				return
-			}
 
-		}
 		err = MyGOWS.SendGrpStatus(status, ownerID.(uint), user[0].ID, gID.(uint))
 		if err != nil {
 
