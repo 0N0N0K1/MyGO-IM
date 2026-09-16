@@ -2,14 +2,10 @@ package MyGOWS
 
 import (
 	"MyGO-IM/DB"
-	"MyGO-IM/Utils"
-	"context"
 	"encoding/json"
 	"github.com/bwmarrin/snowflake"
-	"github.com/gorilla/websocket"
-
 	"log"
-	"time"
+	"sync"
 )
 
 var H *Hub
@@ -18,18 +14,27 @@ var SnowID *snowflake.Node
 // InitHub 初始化并启动 Hub
 func InitHub() {
 	H = NewHub()
+
 	H.ClientPool.New = func() any {
 		H.mu.Lock()
 		defer H.mu.Unlock()
 		c := new(Client)
 		return c
 	}
-	H.MsgPool.New = func() any {
-		H.mu.Lock()
-		defer H.mu.Unlock()
-		c := new(Message)
-		return c
-	}
+	H.ServerMsgPool = sync.Pool{
+		New: func() any {
+			H.mu.Lock()
+			defer H.mu.Unlock()
+			c := new(ServerMessage)
+			return c
+		}}
+	H.ClientMsgPool = sync.Pool{
+		New: func() any {
+			H.mu.Lock()
+			defer H.mu.Unlock()
+			c := new(ClientMessage)
+			return c
+		}}
 	SnowID, _ = snowflake.NewNode(1)
 	go H.Run()
 	log.Println("WS集中管理器Hub创建成功")
@@ -41,7 +46,7 @@ func NewHub() *Hub {
 		Clients:    make(map[uint]*Client),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
-		Broadcast:  make(chan Message, 256),
+		Broadcast:  make(chan ServerMessage, 256),
 	}
 }
 
@@ -78,201 +83,6 @@ func (h *Hub) Run() {
 				}
 			}
 			h.mu.RUnlock()
-		}
-	}
-}
-
-// ReadPump 持续从客户端读消息
-func (c *Client) ReadPump() {
-	// defer 下线注销通知
-	defer func() {
-		c.Hub.Unregister <- c
-		_ = c.Conn.Close()
-	}()
-	c.Conn.SetReadLimit(512 * 1024) // 最大消息 512KB
-	// 设置心跳检测
-	c.Conn.SetPongHandler(func(string) error {
-		_ = c.Conn.SetReadDeadline(time.Now().Add(30 * time.Second))
-		return nil
-	})
-	// 循环读取客户端消息
-	for {
-		_, message, err := c.Conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				break
-			}
-		}
-		if c.ReadHandler(message) {
-			select {
-			case <-c.Close:
-				return
-			case <-c.SendReady:
-			}
-		} else {
-			select {
-			case <-c.Close:
-				return
-			default:
-
-			}
-		}
-	}
-}
-
-// WritePump 持续向客户端写消息
-func (c *Client) WritePump() {
-	ticker := time.NewTicker(27 * time.Second) // 心跳间隔
-	defer func() {
-		ticker.Stop()
-		_ = c.Conn.Close()
-	}()
-
-	for {
-		select {
-		case <-c.Close:
-			return
-		case message, ok := <-c.Send:
-			_ = c.Conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-			if !ok {
-				_ = c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-			c.WriteHandler(message)
-		case <-ticker.C:
-			_ = c.Conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
-			}
-		}
-	}
-}
-
-// ReadHandler 从客户端收到消息的处理函数
-func (c *Client) ReadHandler(message []byte) (sent bool) {
-	msg := c.Hub.MsgPool.Get().(*Message)
-	defer c.Hub.MsgPool.Put(msg)
-	if err := json.Unmarshal(message, &msg); err != nil {
-		log.Println(err)
-		return
-	}
-	msg.MsgID = int64(SnowID.Generate())
-	msg.FromName = c.Name
-	msg.FromID = c.ID
-	msg.Timestamp = time.Now().Unix()
-	DB.MsgNumPlus()
-	return c.SendFunc(msg)
-}
-
-// WriteHandler 向客户端发送消息的处理函数
-func (c *Client) WriteHandler(message []byte) {
-	var msg Message
-	err := json.Unmarshal(message, &msg)
-	if err != nil {
-		c.AckReady <- false
-		return
-	}
-	log.Printf("write begin %v", msg)
-	switch msg.Method {
-	case "system":
-		_ = c.Conn.WriteMessage(websocket.TextMessage, message)
-		return
-	case "group":
-		if !Utils.Dedup(c.ID, msg.MsgID, msg.Seq) {
-			log.Printf("repeat")
-			c.AckReady <- true
-			return
-		}
-
-		readSeq := DB.GetGroupReadSeq(msg.ToID, c.ID)
-		if readSeq != msg.Seq {
-			log.Println(readSeq, msg.Seq)
-			log.Println("readSeq != msg.Seq")
-			c.AckReady <- false
-			return
-		}
-		err = c.Conn.WriteMessage(websocket.TextMessage, message)
-		if err != nil {
-			log.Println("WriteMessage err")
-			c.AckReady <- false
-			return
-		}
-		DB.IncrGroupReadSeq(msg.ToID, c.ID, DB.GetGroupReadSeq(msg.ToID, c.ID)+1)
-
-	case "private":
-		if !Utils.Dedup(msg.ToID, msg.MsgID, msg.Seq) {
-			log.Printf("repeat")
-			c.AckReady <- true
-			return
-		}
-		readSeq, _ := DB.GetPrivateSeq(msg.ToID, msg.FromID)
-		if readSeq != msg.Seq {
-			log.Println(readSeq)
-			log.Println("readSeq != msg.Seq")
-			c.AckReady <- false
-			return
-		}
-		err = c.Conn.WriteMessage(websocket.TextMessage, message)
-		if err != nil {
-			log.Printf("WriteMessage+:" + err.Error())
-			c.AckReady <- false
-			return
-		}
-		DB.IncrPrivateReadSeq(msg.ToID, msg.FromID, msg.Seq+1)
-	}
-	c.AckReady <- true
-
-}
-
-// ConfirmHandler 异步处理发送消息后RabbitMQ的confirm
-func (c *Client) ConfirmHandler() {
-	for ack := range c.Confirm {
-
-		log.Printf("收到confirm tag: %d ack: %v", ack.DeliveryTag, ack.Ack)
-
-		if ack.Ack {
-			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
-			result, err := cmd.Result()
-			if err != nil {
-				return
-			}
-			DB.RDB.Del(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
-			var msg Message
-			err = json.Unmarshal([]byte(result), &msg)
-			//持久化到MySQL
-			err = DB.InsertMsg(msg.FromID, msg.ToID, msg.Seq, msg.FromName, msg.ToName, msg.Method, result)
-			//发送者writeSeq+1
-			switch msg.Method {
-			case "group":
-				DB.IncrGroupWriteSeq(msg.ToID, msg.Seq+1)
-			case "private":
-				DB.IncrPrivateWriteSeq(msg.FromID, msg.ToID, msg.Seq+1)
-			}
-			c.SendReady <- struct{}{}
-		} else {
-			cmd := DB.RDB.Get(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
-			result, err := cmd.Result()
-			if err != nil {
-				return
-			}
-			DB.RDB.Del(context.TODO(), Utils.CachePublishMsgName(ack.DeliveryTag, c.ID))
-			var msg Message
-			_ = json.Unmarshal([]byte(result), &msg)
-			c.Hub.mu.RLock()
-			target, ok := c.Hub.Clients[msg.FromID]
-			c.Hub.mu.RUnlock()
-
-			data, _ := json.Marshal(NewSystemMsg(msg.Payload+"发送失败", "system", msg.FromName, 0, msg.FromID))
-			if ok {
-				select {
-				case target.Send <- data:
-				//监听客户端连接是否关闭
-				case <-c.Close:
-					return
-				default:
-					close(target.Send)
-				}
-			}
 		}
 	}
 }

@@ -13,7 +13,7 @@ const (
 )
 
 // InsertMsg 插入一条消息
-func InsertMsg(from, to uint, seq uint64, fromname, toname, method string, Content string) (err error) {
+func InsertMsg(from, to uint, seq uint64, method string, Content string) (err error) {
 	var msgs = PrivateMessage{
 		ToID:    to,
 		FromID:  from,

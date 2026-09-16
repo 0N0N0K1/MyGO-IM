@@ -23,15 +23,8 @@ func (c *Client) ConsumeMyQueue() {
 		case msg = <-msgs:
 			log.Printf("写入send消息%v", string(msg.Body))
 			c.Send <- msg.Body
-			ok := <-c.AckReady
-			log.Printf("ackready %v", ok)
-			if ok {
-				msg.Ack(false)
-			} else {
-				msg.Nack(false, true)
-			}
-		default:
-
+			<-c.AckReady
+			msg.Ack(false)
 		}
 	}
 }

@@ -13,7 +13,7 @@ var MySecret = []byte(Conf.Conf.J.Secret)
 
 // CreateJWT 创建JWT
 func CreateJWT(userID uint) (string, error) {
-
+	uuid.New()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Issuer:    "RippleHeart",
 		Subject:   "OK",

@@ -11,9 +11,14 @@ import (
 	"time"
 )
 
-// CachePublishMsgName 返回 deliverTag 与 Msg 缓存的键名
-func CachePublishMsgName(deliverTag uint64, userID uint) string {
-	return fmt.Sprintf("user:%s:tag:%s", strconv.Itoa(int(userID)), strconv.Itoa(int(deliverTag)))
+// UsersIdSent 返回 users:<id>:sent 键名
+func UsersIdSent(userID uint) string {
+	return fmt.Sprintf("user:%s:sent", strconv.Itoa(int(userID)))
+}
+
+// UsersIdSentTag 返回 users:<id>:sent:<tag> 键名
+func UsersIdSentTag(deliverTag uint64, userID uint) string {
+	return fmt.Sprintf("user:%s:sent:%s", strconv.Itoa(int(userID)), strconv.Itoa(int(deliverTag)))
 }
 
 // CacheDedupMsgID 返回最近收到消息缓存msgID的键名

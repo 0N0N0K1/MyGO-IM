@@ -65,10 +65,7 @@ func CreateGroup(c *gin.Context) {
 // EnterGroup 进入群的处理函数
 func EnterGroup(c *gin.Context) {
 	actorID, _ := c.Get("actorID")
-	actorName, _ := c.Get("actorName")
 	gID, _ := c.Get("gID")
-	gName, _ := c.Get("gName")
-	ownerName, _ := c.Get("ownerName")
 	ownerID, _ := c.Get("ownerID")
 	applicantID := c.Query("id")
 	status := c.Query("status")
@@ -83,7 +80,13 @@ func EnterGroup(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "UpdateGrpStatus: " + err.Error()})
 			return
 		}
-		MyGOWS.SendGrpStatus(status, actorName.(string), ownerName.(string), gName.(string), actorID.(uint), ownerID.(uint), gID.(uint))
+
+		err = MyGOWS.SendGrpStatus(status, actorID.(uint), ownerID.(uint), gID.(uint))
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
+			return
+
+		}
 	case "reject", "accept":
 		if actorID.(uint) != ownerID.(uint) {
 			c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "You aren't the group owner"})
@@ -112,7 +115,12 @@ func EnterGroup(c *gin.Context) {
 			}
 
 		}
-		MyGOWS.SendGrpStatus(status, ownerName.(string), user[0].Name, gName.(string), ownerID.(uint), user[0].ID, gID.(uint))
+		err = MyGOWS.SendGrpStatus(status, ownerID.(uint), user[0].ID, gID.(uint))
+		if err != nil {
+
+			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "successfully " + status})

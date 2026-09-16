@@ -7,7 +7,7 @@ import (
 )
 
 // PublishPrivate 私聊 Publish 处理函数
-func (c *Client) PublishPrivate(msg *Message) error {
+func (c *Client) PublishPrivate(msg *ServerMessage) error {
 	data, _ := json.Marshal(msg)
 	err := c.MQCh.Publish("private", strconv.Itoa(int(msg.ToID)), false, false,
 		amqp091.Publishing{
@@ -20,7 +20,7 @@ func (c *Client) PublishPrivate(msg *Message) error {
 }
 
 // PublishGroup 群聊 Publish 处理函数
-func (c *Client) PublishGroup(msg *Message) error {
+func (c *Client) PublishGroup(msg *ServerMessage) error {
 	data, _ := json.Marshal(msg)
 	err := c.MQCh.Publish("group", strconv.Itoa(int(msg.ToID)), false, false,
 		amqp091.Publishing{
@@ -32,10 +32,10 @@ func (c *Client) PublishGroup(msg *Message) error {
 	return nil
 }
 
-// PublishSystem 系统通知 Publish 处理函数
-func (s *SystemMQChan) PublishSystem(msg *Message) error {
+// PublishServerACK 服务端ACK Publish 处理函数
+func (s *SystemMQChan) PublishServerACK(msg *ServerACK, toid uint) error {
 	data, _ := json.Marshal(&msg)
-	err := s.MQCh.Publish("system", strconv.Itoa(int(msg.ToID)), false, false,
+	err := s.MQCh.Publish("system", strconv.Itoa(int(toid)), false, false,
 		amqp091.Publishing{
 			Body: data,
 		})

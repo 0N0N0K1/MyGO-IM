@@ -53,7 +53,6 @@ func GetFriends(c *gin.Context) {
 // AddFriend 添加好友的处理函数，提供通过 query id 添加好友
 func AddFriend(c *gin.Context) {
 	actorID, _ := c.Get("actorID")
-	actorName, _ := c.Get("actorName")
 	frdID := c.Query("id")
 	status := c.Query("status")
 	var frd []DB.User
@@ -75,7 +74,6 @@ func AddFriend(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Repeated addition"})
 		return
 	}
-
 	switch status {
 	case "pending": //待处理
 
@@ -84,7 +82,11 @@ func AddFriend(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
 			return
 		}
-		MyGOWS.SendFrdStatus(status, actorName.(string), frd[0].Name, actorID.(uint), uint(fID))
+		err = MyGOWS.SendFrdStatus(status, actorID.(uint), uint(fID))
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Apply!"})
 	case "reject": //拒绝
 		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(uint), "reject")
@@ -92,10 +94,18 @@ func AddFriend(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
 			return
 		}
-		MyGOWS.SendFrdStatus(status, actorName.(string), frd[0].Name, actorID.(uint), uint(fID))
+		err = MyGOWS.SendFrdStatus(status, actorID.(uint), uint(fID))
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Reject!"})
 	case "accept": //接受
-		MyGOWS.SendFrdStatus(status, actorName.(string), frd[0].Name, actorID.(uint), uint(fID))
+		err := MyGOWS.SendFrdStatus(status, actorID.(uint), uint(fID))
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
+			return
+		}
 		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(uint), "accept")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})

@@ -10,20 +10,19 @@ import (
 func SetOnline(userID uint) {
 	var online = 1
 
-	RDB.HSetNX(context.TODO(), "online", strconv.Itoa(int(userID)), online)
+	RDB.HSetNX(context.TODO(), "users:online", strconv.Itoa(int(userID)), online)
 }
 
 // SetOffline 删除缓存的在线状态
 func SetOffline(userID uint) {
-	RDB.HDel(context.TODO(), "online", strconv.Itoa(int(userID)))
+	RDB.HDel(context.TODO(), "users:online", strconv.Itoa(int(userID)))
 }
 
 // CheckOnline 检查是否在线
 func CheckOnline(userID uint) (online bool) {
-	res := RDB.HGet(context.TODO(), "online", strconv.Itoa(int(userID)))
-	val, err := res.Int()
-
-	if err != nil || val == 0 {
+	res := RDB.HGet(context.TODO(), "users:online", strconv.Itoa(int(userID)))
+	_, err := res.Result()
+	if err != nil {
 		return false
 	}
 	return true
