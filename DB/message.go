@@ -13,12 +13,13 @@ const (
 )
 
 // InsertMsg 插入一条消息
-func InsertMsg(from, to uint, seq uint64, method string, Content string) (err error) {
+func InsertMsg(from, to int64, writerseq uint64, cID, method string, Content string) (err error) {
 	var msgs = PrivateMessage{
-		ToID:    to,
-		FromID:  from,
-		Content: Content,
-		Seq:     seq,
+		ToID:           to,
+		FromID:         from,
+		Content:        Content,
+		Seq:            writerseq,
+		ConversationId: cID,
 	}
 	switch method {
 	case "private":
@@ -33,7 +34,7 @@ func InsertMsg(from, to uint, seq uint64, method string, Content string) (err er
 }
 
 // QueryPrivateMsg 查找 ID 与 ID2 的聊天
-func QueryPrivateMsg(ID1, ID2 uint, page, limit int, mode MsgQueryMode) (Pagination, error) {
+func QueryPrivateMsg(ID1, ID2 int64, page, limit int, mode MsgQueryMode) (Pagination, error) {
 	var msgs []PrivateMessage
 	var err error
 	switch mode {
@@ -52,7 +53,7 @@ func QueryPrivateMsg(ID1, ID2 uint, page, limit int, mode MsgQueryMode) (Paginat
 }
 
 // QueryGroupMsg 查找 ID 群的聊天记录
-func QueryGroupMsg(gID, mID uint, page, limit int, mode MsgQueryMode) (Pagination, error) {
+func QueryGroupMsg(gID, mID int64, page, limit int, mode MsgQueryMode) (Pagination, error) {
 	var msgs []GroupMessage
 	var err error
 	switch mode {
@@ -73,4 +74,30 @@ func QueryGroupMsg(gID, mID uint, page, limit int, mode MsgQueryMode) (Paginatio
 // MsgNumPlus 今日聊天记录数+1
 func MsgNumPlus() {
 	RDB.Incr(context.TODO(), "messageNum")
+}
+
+// PullGroupMsg  拉取群的聊天记录
+func PullGroupMsg(conversationID string, limit int, endseq uint64) ([]GroupMessage, error) {
+	var msgs []GroupMessage
+	var err error
+	err = MySQL.Table("group_messages").
+		Select("*").
+		Where("conversation_id=? and seq<=?", conversationID, endseq).
+		Order("seq desc").
+		Limit(limit).Find(&msgs).Error
+
+	return msgs, err
+}
+
+// PullPrivateMsg 拉取私聊的聊天记录
+func PullPrivateMsg(conversationID string, limit int, endseq uint64) ([]GroupMessage, error) {
+	var msgs []GroupMessage
+	var err error
+	err = MySQL.Table("private_messages").
+		Select("*").
+		Where("conversation_id=? and seq<=?", conversationID, endseq).
+		Order("seq desc").
+		Limit(limit).Find(&msgs).Error
+
+	return msgs, err
 }

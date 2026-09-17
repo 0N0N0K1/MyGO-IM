@@ -40,7 +40,6 @@ func (pool *ProducerChan) Put(producer *Producer) {
 	if !producer.Ch.IsClosed() {
 		producer.Ch, producer.Cfm, _ = NewChannel()
 	}
-	producer.Stop <- struct{}{}
 	ProducerPool.Chan <- producer
 }
 func (pool *ProducerChan) Get() (producer *Producer) {

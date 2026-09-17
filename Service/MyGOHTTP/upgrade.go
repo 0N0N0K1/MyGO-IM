@@ -19,7 +19,7 @@ func WSUpgrade(c *gin.Context) {
 	actorName, _ := c.Get("actorName")
 
 	//初始化聊天
-	if err = MyGOWS.InitChat(actorName.(string), actorID.(uint), conn); err != nil {
+	if err = MyGOWS.InitChat(actorName.(string), actorID.(int64), conn); err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "102", "msg": "TRY AGAIN!"})
 		c.Abort()
 		return

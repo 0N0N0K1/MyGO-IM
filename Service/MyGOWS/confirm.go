@@ -2,7 +2,6 @@ package MyGOWS
 
 import (
 	"MyGO-IM/DB"
-	"MyGO-IM/Utils"
 	"context"
 	"encoding/json"
 )
@@ -12,7 +11,10 @@ func (c *Producer) ConfirmHandler() {
 	for {
 		select {
 		case ack := <-c.Cfm:
-			cmd := DB.RDB.Get(context.TODO(), Utils.UsersIdSentTag(ack.DeliveryTag, c.ID))
+			if ack.DeliveryTag == 0 {
+				return
+			}
+			cmd := DB.RDB.Get(context.TODO(), DB.UsersIdSentTag(ack.DeliveryTag, c.ID))
 			result, err := cmd.Result()
 			if err != nil {
 				return
@@ -28,9 +30,7 @@ func (c *Producer) ConfirmHandler() {
 				}
 
 			}
-			DB.RDB.Del(context.TODO(), Utils.UsersIdSentTag(ack.DeliveryTag, c.ID))
-		case <-c.Stop:
-			return
+			DB.RDB.Del(context.TODO(), DB.UsersIdSentTag(ack.DeliveryTag, c.ID))
 		}
 
 	}

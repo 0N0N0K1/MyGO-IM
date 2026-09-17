@@ -22,7 +22,7 @@ func GetFriends(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "ID invalid"})
 			return
 		}
-		frds, err := DB.QueryFrd(userID.(uint), fID, DB.ByID)
+		frds, err := DB.QueryFrd(userID.(int64), fID, DB.ByID)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
 			return
@@ -31,7 +31,7 @@ func GetFriends(c *gin.Context) {
 		return
 	}
 	if frdName != "" {
-		frds, err := DB.QueryFrd(userID.(uint), frdName, DB.ByName)
+		frds, err := DB.QueryFrd(userID.(int64), frdName, DB.ByName)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
 			return
@@ -41,7 +41,7 @@ func GetFriends(c *gin.Context) {
 	}
 	l, _ := strconv.Atoi(limit)
 	p, _ := strconv.Atoi(page)
-	result, err := DB.QueryFrdLimit(userID.(uint), p, l)
+	result, err := DB.QueryFrdLimit(userID.(int64), p, l)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
 		return
@@ -68,7 +68,7 @@ func AddFriend(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Illegal Addition!"})
 		return
 	}
-	result, _ := DB.QueryFrd(actorID.(uint), frd[0].ID, DB.ByID)
+	result, _ := DB.QueryFrd(actorID.(int64), frd[0].ID, DB.ByID)
 	//是否已添加
 	if len(result) != 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Repeated addition"})
@@ -77,38 +77,39 @@ func AddFriend(c *gin.Context) {
 	switch status {
 	case "pending": //待处理
 
-		err = DB.UpdateFrdStatus(actorID.(uint), frd[0].ID, "pending")
+		err = DB.UpdateFrdStatus(actorID.(int64), frd[0].ID, "pending")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
 			return
 		}
-		err = MyGOWS.SendFrdStatus(status, actorID.(uint), uint(fID))
+		err = MyGOWS.SendFrdStatus(status, actorID.(int64), int64(fID))
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Apply!"})
 	case "reject": //拒绝
-		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(uint), "reject")
+		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(int64), "reject")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
 			return
 		}
-		err = MyGOWS.SendFrdStatus(status, actorID.(uint), uint(fID))
+		err = MyGOWS.SendFrdStatus(status, actorID.(int64), int64(fID))
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful Reject!"})
 	case "accept": //接受
-		err := MyGOWS.SendFrdStatus(status, actorID.(uint), uint(fID))
-		if err != nil {
-			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
-			return
-		}
-		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(uint), "accept")
+
+		err = DB.UpdateFrdStatus(frd[0].ID, actorID.(int64), "accept")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "InsertFrd: " + err.Error()})
+			return
+		}
+		err := MyGOWS.SendFrdStatus(status, actorID.(int64), int64(fID))
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Successful accept!"})
@@ -128,14 +129,14 @@ func DeleteFriend(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "String2int error"})
 		return
 	}
-	frd, err := DB.QueryFrd(actorID.(uint), fID, DB.ByID)
+	frd, err := DB.QueryFrd(actorID.(int64), fID, DB.ByID)
 	//是否已添加
-	if len(frd) == 0 || actorID.(uint) == uint(fID) || err != nil {
+	if len(frd) == 0 || actorID.(int64) == int64(fID) || err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "Illegal delete"})
 		return
 	}
 	//删除
-	err = DB.DeleteFrd(actorID.(uint), uint(fID))
+	err = DB.DeleteFrd(actorID.(int64), int64(fID))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 102, "error": "DeleteFrd: " + err.Error()})
 		return

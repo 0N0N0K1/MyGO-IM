@@ -2,7 +2,6 @@ package MyGOWS
 
 import (
 	"MyGO-IM/DB"
-	"MyGO-IM/Utils"
 	"encoding/json"
 
 	"log"
@@ -37,7 +36,7 @@ func ConsumerWorker() func() error {
 		for {
 			msg := <-msgs
 			json.Unmarshal(msg.Body, &data)
-			if !Utils.Dedup(ID, data.MsgID) {
+			if !DB.Dedup(ID, data.MsgID) {
 				log.Printf("repeat")
 				goto loop
 			}
@@ -49,15 +48,27 @@ func ConsumerWorker() func() error {
 				if ok {
 					cli.Send <- msg.Body
 				}
+				H.mu.Lock()
+				cli, ok = H.Clients[data.FromID]
+				H.mu.Unlock()
+				if ok {
+					cli.Send <- msg.Body
+				}
 			case "group":
 				var result []DB.User
+				H.mu.Lock()
+				cli, ok := H.Clients[data.FromID]
+				H.mu.Unlock()
+				if ok {
+					cli.Send <- msg.Body
+				}
 				err = DB.MySQL.
 					Raw("select a.id from users a,`groups` b,group_users c where  b.id=? and b.id=c.group_id and a.id=c.user_id ",
 						data.ToID).
 					Find(&result).Error
 				for _, user := range result {
 					H.mu.Lock()
-					cli, ok := H.Clients[user.ID]
+					cli, ok = H.Clients[user.ID]
 					H.mu.Unlock()
 					if ok {
 						cli.Send <- msg.Body

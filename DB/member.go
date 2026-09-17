@@ -5,7 +5,7 @@ import (
 )
 
 // UpdateGrpStatus 插入成员表记录
-func UpdateGrpStatus(memberID, groupID uint, status string) (err error) {
+func UpdateGrpStatus(memberID, groupID int64, status string) (err error) {
 	var member = GroupUser{
 		GroupID: groupID,
 		UserID:  memberID,
@@ -28,7 +28,7 @@ func UpdateGrpStatus(memberID, groupID uint, status string) (err error) {
 }
 
 // QueryMemberAll 查找返回群成员列表
-func QueryMemberAll(groupID uint, page, limit int) (Pagination, error) {
+func QueryMemberAll(groupID int64, page, limit int) (Pagination, error) {
 	var result []User
 
 	err := MySQL.
@@ -43,7 +43,7 @@ func QueryMemberAll(groupID uint, page, limit int) (Pagination, error) {
 }
 
 // QueryMember 查找返回一个群成员
-func QueryMember(userID, groupID uint) User {
+func QueryMember(userID, groupID int64) User {
 	var result User
 	MySQL.
 		Raw("select a.name, a.id from users a,group_users c where c.status='accept' and c.group_id=? and a.id=c.user_id and a.id=?",
@@ -52,7 +52,17 @@ func QueryMember(userID, groupID uint) User {
 	return result
 }
 
+// QueryMemberByCID 查找返回一个群成员
+func QueryMemberByCID(userID int64, cid string) GroupUser {
+	var result GroupUser
+	MySQL.
+		Raw("select group_id from group_users  where status='accept' and concersation_id=? and user_id=?",
+			cid, userID).
+		First(&result)
+	return result
+}
+
 // NoMemberAnymore 删除成员表记录
-func NoMemberAnymore(memberID, groupID uint) error {
+func NoMemberAnymore(memberID, groupID int64) error {
 	return MySQL.Table("group_users").Where("group_id=? and user_id=?", groupID, memberID).Delete(&GroupUser{}).Error
 }

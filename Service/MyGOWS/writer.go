@@ -56,10 +56,9 @@ func (c *Client) WriteHandler(message []byte) {
 		if err != nil {
 			return
 		}
-		DB.IncrGroupReadSeq(msg.ToID, c.ID, DB.GetGroupReadSeq(msg.ToID, c.ID)+1)
 
 	case "private":
-		readSeq, _ := DB.GetPrivateSeq(msg.ToID, msg.FromID)
+		readSeq, _, _ := DB.GetPrivateSeq(msg.ToID, msg.FromID)
 		if readSeq > msg.Seq {
 			return
 		}
@@ -67,7 +66,6 @@ func (c *Client) WriteHandler(message []byte) {
 		if err != nil {
 			return
 		}
-		DB.IncrPrivateReadSeq(msg.ToID, msg.FromID, msg.Seq+1)
 	}
 
 }

@@ -56,7 +56,7 @@ func (c *Client) ReadHandler(message []byte) {
 	log.Println("ReadHandler 开始")
 	switch clientMsg.Cmd {
 	case "send":
-		serverMsg.MsgID = int64(SnowID.Generate())
+		serverMsg.MsgID = int64(Utils.SnowID.Generate())
 		serverMsg.FromID = c.ID
 		serverMsg.ToID = clientMsg.ToId
 		serverMsg.Type = clientMsg.Type
@@ -80,23 +80,20 @@ func (c *Client) ReadHandler(message []byte) {
 func (c *Client) MsgSender() func(msg *ServerMessage) {
 	var deliveryTag uint64 = 1
 	return func(msg *ServerMessage) {
-		cmd := DB.RDB.HGet(context.TODO(), Utils.UsersIdSent(c.ID), strconv.FormatInt(msg.ReplyID, 10))
+		cmd := DB.RDB.HGet(context.TODO(), DB.UsersIdSent(c.ID), strconv.FormatInt(msg.ReplyID, 10))
 		if cmd.Err() == nil {
 			return
 		}
-		online := DB.CheckOnline(msg.ToID)
 		// 根据消息类型路由
 		switch msg.Method {
 		case private:
 			log.Println("SendFunc 开始 private")
-			if c.SendPrivate(msg, deliveryTag, online) {
-				if online {
-					deliveryTag++
-				}
-				log.Println("SendFunc 成功")
-				return
+			if c.SendPrivate(msg, deliveryTag) {
+				deliveryTag++
 			}
-			log.Println("SendFunc 失败")
+			log.Println("SendFunc 成功")
+			return
+
 		case group:
 			if c.SendGroup(msg, deliveryTag) {
 				deliveryTag++
@@ -107,15 +104,15 @@ func (c *Client) MsgSender() func(msg *ServerMessage) {
 	}
 }
 
-func (c *Client) SendPrivate(msg *ServerMessage, deliveryTag uint64, online bool) bool {
+func (c *Client) SendPrivate(msg *ServerMessage, deliveryTag uint64) bool {
 	producer := ProducerPool.Get()
 	defer ProducerPool.Put(producer)
 	// 判断是否为好友,拿到发送的Seq
-	_, writeSeq := DB.GetPrivateSeq(msg.FromID, msg.ToID)
-	if writeSeq != 0 {
-		msg.Seq = writeSeq
+	_, _, globalSeq := DB.GetPrivateSeq(msg.FromID, msg.ToID)
+	if globalSeq != 0 {
+		msg.Seq = globalSeq
 	} else {
-		ACK := NewServerACK("nack", "对方不是你的好友", msg.ReplyID, msg.FromID, false)
+		ACK := NewSystemMsg("nack", "对方不是你的好友", msg.ReplyID, msg.FromID, false, nil)
 		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
@@ -123,37 +120,30 @@ func (c *Client) SendPrivate(msg *ServerMessage, deliveryTag uint64, online bool
 
 	//todo 事务保障两步原子性
 	// 消息入库	// writeSeq+1
-	err := DB.InsertMsg(msg.FromID, msg.ToID, msg.Seq, msg.Method, string(marshal))
+	err := DB.InsertMsg(msg.FromID, msg.ToID, globalSeq, msg.ConversationId, msg.Method, string(marshal))
 	if err != nil {
-		ACK := NewServerACK("nack", "持久化失败", msg.ReplyID, msg.FromID, false)
+		ACK := NewSystemMsg("nack", "持久化失败", msg.ReplyID, msg.FromID, true, nil)
 		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
-	DB.IncrPrivateWriteSeq(msg.FromID, msg.ToID, msg.Seq+1)
-
-	if online {
-		// 在线 Publish 到私聊交换机
-		err = producer.PublishHandler(msg, msg.ConversationId)
-		// Publish失败通知
-		if err != nil {
-			ACK := NewServerACK("nack", "publish error", msg.ReplyID, msg.FromID, true)
-			producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
-			return false
-		}
-		data, _ := json.Marshal(msg)
-		DB.RDB.HSet(context.TODO(), Utils.UsersIdSent(c.ID), msg.ReplyID, msg.ReplyID)
-		DB.RDB.HSet(context.TODO(), Utils.UsersIdSentTag(deliveryTag, producer.ID), msg.ReplyID, data)
-		return true
-	} else {
-
-		// 缓存到Redis
-		DB.RDB.HSet(context.TODO(), Utils.UsersIdSent(c.ID), msg.ReplyID, msg.MsgID)
-		// ack
-		ACK := NewServerACK("ack", "ok", msg.ReplyID, msg.FromID, false)
+	DB.IncrPrivateGlobalWriteSeq(msg.FromID, msg.ToID, globalSeq+1)
+	DB.IncrPrivateReadSeq(msg.FromID, msg.ToID, msg.Seq)
+	// 在线 Publish 到私聊交换机
+	err = producer.PublishHandler(msg, msg.ConversationId)
+	// Publish失败通知
+	if err != nil {
+		ACK := NewSystemMsg("nack", "publish error", msg.ReplyID, msg.FromID, false, nil)
 		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
-		return true
-
+		return false
 	}
+	data, _ := json.Marshal(msg)
+	DB.RDB.HSet(context.TODO(), DB.UsersIdSent(c.ID), msg.ReplyID, msg.ReplyID)
+	DB.RDB.HSet(context.TODO(), DB.UsersIdSentTag(deliveryTag, producer.ID), msg.ReplyID, data)
+
+	// ack
+	ACK := NewSystemMsg("ack", "ok", msg.ReplyID, msg.FromID, false, nil)
+	producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
+	return true
 
 }
 
@@ -163,7 +153,7 @@ func (c *Client) SendGroup(msg *ServerMessage, deliveryTag uint64) bool {
 	defer ProducerPool.Put(producer)
 	// 判断发送者是否为群成员
 	if DB.QueryMember(msg.FromID, msg.ToID).ID == 0 {
-		ACK := NewServerACK("nack", "你不是群成员", msg.ReplyID, msg.FromID, false)
+		ACK := NewSystemMsg("nack", "你不是群成员", msg.ReplyID, msg.FromID, false, nil)
 		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
@@ -171,7 +161,7 @@ func (c *Client) SendGroup(msg *ServerMessage, deliveryTag uint64) bool {
 	ban, t := DB.QueryIfSilence(msg.FromID, msg.ToID)
 	if ban {
 		content := fmt.Sprintf("你已被禁言，剩余解禁时间%v", t)
-		ACK := NewServerACK("nack", content, msg.ReplyID, msg.FromID, false)
+		ACK := NewSystemMsg("nack", content, msg.ReplyID, msg.FromID, false, nil)
 		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
@@ -180,25 +170,25 @@ func (c *Client) SendGroup(msg *ServerMessage, deliveryTag uint64) bool {
 	//todo 事务保障三步原子性
 	// 拿到群的WriteSeq  // 消息入库	// writeSeq+1
 	msg.Seq = DB.GetGroupWriterSeq(msg.ToID)
-	err := DB.InsertMsg(msg.FromID, msg.ToID, msg.Seq, msg.Method, string(marshal))
+	err := DB.InsertMsg(msg.FromID, msg.ToID, msg.Seq, msg.ConversationId, msg.Method, string(marshal))
 	if err != nil {
-		ACK := NewServerACK("nack", "持久化失败", msg.ReplyID, msg.FromID, false)
+		ACK := NewSystemMsg("nack", "持久化失败", msg.ReplyID, msg.FromID, true, nil)
 		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
 	DB.IncrGroupWriteSeq(msg.ToID, msg.Seq+1)
-
+	DB.IncrGroupReadSeq(msg.ToID, msg.FromID, msg.Seq)
 	// Publish到群聊交换机
 	err = producer.PublishHandler(msg, msg.ConversationId)
 	// Publish失败通知
 	if err != nil {
-		ACK := NewServerACK("nack", "publish error", msg.ReplyID, msg.FromID, true)
+		ACK := NewSystemMsg("nack", "publish error", msg.ReplyID, msg.FromID, false, nil)
 		producer.PublishHandler(ACK, strconv.Itoa(int(msg.FromID)))
 		return false
 	}
 	// 缓存到Redis
 	data, _ := json.Marshal(msg)
-	DB.RDB.HSet(context.TODO(), Utils.UsersIdSent(c.ID), msg.ReplyID, msg.MsgID)
-	DB.RDB.HSet(context.TODO(), Utils.UsersIdSentTag(deliveryTag, producer.ID), msg.ReplyID, data)
+	DB.RDB.HSet(context.TODO(), DB.UsersIdSent(c.ID), msg.ReplyID, msg.MsgID)
+	DB.RDB.HSet(context.TODO(), DB.UsersIdSentTag(deliveryTag, producer.ID), msg.ReplyID, data)
 	return true
 }

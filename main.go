@@ -5,12 +5,13 @@ import (
 	"MyGO-IM/Conf"
 	"MyGO-IM/DB"
 	"MyGO-IM/Service/MyGOWS"
+	"MyGO-IM/Utils"
 	"log"
 )
 
 // TODO 解决群聊获取/修改Read_seq与Writer_seq时的并发问题——————MySQL事务
 func main() {
-
+	Utils.InitSnowflake()
 	Conf.LoadConfig()
 	DB.InitMySQL()
 	DB.InitRedis()

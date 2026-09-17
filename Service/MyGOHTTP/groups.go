@@ -16,11 +16,11 @@ func DropMyGroup(c *gin.Context) {
 	actorID, _ := c.Get("actorID")
 	ownerID, _ := c.Get("ownerID")
 	gID, _ := c.Get("gID")
-	if actorID.(uint) != ownerID.(uint) {
+	if actorID.(int64) != ownerID.(int64) {
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "You aren't the group owner"})
 		return
 	}
-	err := DB.DropGroup(gID.(uint))
+	err := DB.DropGroup(gID.(int64))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "DropGroup: " + err.Error()})
 		return
@@ -33,33 +33,24 @@ func DropMyGroup(c *gin.Context) {
 func CreateGroup(c *gin.Context) {
 	actorID, _ := c.Get("actorID")
 	actorName, _ := c.Get("actorName")
-	groupName := c.Query("groupname")
+	groupName := c.Query("name")
 	if groupName == "" {
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "No group name input"})
 		return
 	}
-	groupID, err := DB.QueryGroupID(actorID.(uint), groupName)
-	if groupID != 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 1004, "error": "Repeat create"})
-		return
-	}
-	err = DB.InsertGroup(actorID.(uint), actorName.(string), groupName)
+	GID, err := DB.InsertGroup(actorID.(int64), actorName.(string), groupName)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1004, "error": "InsertGroup: " + err.Error()})
 		return
 	}
-	groupID, err = DB.QueryGroupID(actorID.(uint), groupName)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 1004, "error": "QueryGroupID: " + err.Error()})
-		return
-	}
-	err = DB.UpdateGrpStatus(actorID.(uint), groupID, "pending")
-	err = DB.UpdateGrpStatus(actorID.(uint), groupID, "accept")
+	group := DB.QueryGroup(GID)
+	err = DB.UpdateGrpStatus(actorID.(int64), GID, "pending")
+	err = DB.UpdateGrpStatus(actorID.(int64), GID, "accept")
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1004, "error": "InsertMember: " + err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Create Group successfully"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "group": group})
 }
 
 // EnterGroup 进入群的处理函数
@@ -71,24 +62,24 @@ func EnterGroup(c *gin.Context) {
 	status := c.Query("status")
 	switch status {
 	case "pending":
-		if DB.QueryMember(actorID.(uint), gID.(uint)).ID != 0 {
+		if DB.QueryMember(actorID.(int64), gID.(int64)).ID != 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "You are the member already"})
 			return
 		}
-		err := DB.UpdateGrpStatus(actorID.(uint), gID.(uint), status)
+		err := DB.UpdateGrpStatus(actorID.(int64), gID.(int64), status)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "UpdateGrpStatus: " + err.Error()})
 			return
 		}
 
-		err = MyGOWS.SendGrpStatus(status, actorID.(uint), ownerID.(uint), gID.(uint))
+		err = MyGOWS.SendGrpStatus(status, actorID.(int64), ownerID.(int64), gID.(int64))
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
 			return
 
 		}
 	case "reject", "accept":
-		if actorID.(uint) != ownerID.(uint) {
+		if actorID.(int64) != ownerID.(int64) {
 			c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "You aren't the group owner"})
 			return
 		}
@@ -102,13 +93,13 @@ func EnterGroup(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "QueryUser error"})
 			return
 		}
-		err = DB.UpdateGrpStatus(uint(aplID), gID.(uint), status)
+		err = DB.UpdateGrpStatus(int64(aplID), gID.(int64), status)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "UpdateGrpStatus: " + err.Error()})
 			return
 		}
 
-		err = MyGOWS.SendGrpStatus(status, ownerID.(uint), user[0].ID, gID.(uint))
+		err = MyGOWS.SendGrpStatus(status, ownerID.(int64), user[0].ID, gID.(int64))
 		if err != nil {
 
 			c.JSON(http.StatusOK, gin.H{"code": 102, "error": "notice error"})
@@ -124,20 +115,16 @@ func ExitGroup(c *gin.Context) {
 	actorID, _ := c.Get("actorID")
 	gID, _ := c.Get("gID")
 	ownerID, _ := c.Get("ownerID")
-	if actorID.(uint) == ownerID.(uint) {
+	if actorID.(int64) == ownerID.(int64) {
 		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "Group owner can't exit "})
 		return
 	}
-	err := DB.NoMemberAnymore(actorID.(uint), gID.(uint))
+	err := DB.NoMemberAnymore(actorID.(int64), gID.(int64))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "NoMemberAnymore: " + err.Error()})
 		return
 	}
-	err = MyGOWS.UnbindExchanger(actorID.(uint), gID.(uint))
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "UnbindExchanger: " + err.Error()})
-		return
-	}
+
 	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Exit Group successfully"})
 }
 
@@ -148,7 +135,7 @@ func GetMembers(c *gin.Context) {
 	page := c.Query("page")
 	l, _ := strconv.Atoi(limit)
 	p, _ := strconv.Atoi(page)
-	result, err := DB.QueryMemberAll(gID.(uint), p, l)
+	result, err := DB.QueryMemberAll(gID.(int64), p, l)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1005, "error": "QueryMember error"})
 		return
@@ -162,7 +149,7 @@ func KickOutMember(c *gin.Context) {
 	gID, _ := c.Get("gID")
 	ownerID, _ := c.Get("ownerID")
 	outerID := c.Query("ID")
-	if actorID.(uint) != ownerID.(uint) {
+	if actorID.(int64) != ownerID.(int64) {
 		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "You aren't the group owner"})
 		return
 	}
@@ -175,7 +162,7 @@ func KickOutMember(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "String2int error"})
 		return
 	}
-	err = DB.NoMemberAnymore(uint(outID), gID.(uint))
+	err = DB.NoMemberAnymore(int64(outID), gID.(int64))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "NoMemberAnymore: " + err.Error()})
 		return
@@ -191,7 +178,7 @@ func DoNotSpeak(c *gin.Context) {
 	ownerID, _ := c.Get("ownerID")
 	outerID := c.Query("ID")
 	timer := c.Query("time")
-	if actorID.(uint) != ownerID.(uint) {
+	if actorID.(int64) != ownerID.(int64) {
 		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "You aren't the group owner"})
 		return
 	}
@@ -209,7 +196,7 @@ func DoNotSpeak(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "String2int error"})
 		return
 	}
-	err = DB.OwnerBanUserHelper(uint(outID), gID.(uint), time.Duration(t)*time.Minute)
+	err = DB.OwnerBanUserHelper(int64(outID), gID.(int64), time.Duration(t)*time.Minute)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1003, "error": "OwnerBanUserHelper: " + err.Error()})
 		return
@@ -224,7 +211,7 @@ func GetGroups(c *gin.Context) {
 	page := c.Query("page")
 	l, _ := strconv.Atoi(limit)
 	p, _ := strconv.Atoi(page)
-	result, err := DB.QueryJoinGroup(actorID.(uint), p, l)
+	result, err := DB.QueryJoinGroup(actorID.(int64), p, l)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1002, "error": "Query error"})
 		return

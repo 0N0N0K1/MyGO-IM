@@ -12,7 +12,7 @@ import (
 var MySecret = []byte(Conf.Conf.J.Secret)
 
 // CreateJWT 创建JWT
-func CreateJWT(userID uint) (string, error) {
+func CreateJWT(userID int64) (string, error) {
 	uuid.New()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Issuer:    "RippleHeart",

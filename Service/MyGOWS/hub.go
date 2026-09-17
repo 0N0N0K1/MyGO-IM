@@ -3,13 +3,12 @@ package MyGOWS
 import (
 	"MyGO-IM/DB"
 	"encoding/json"
-	"github.com/bwmarrin/snowflake"
+
 	"log"
 	"sync"
 )
 
 var H *Hub
-var SnowID *snowflake.Node
 
 // InitHub 初始化并启动 Hub
 func InitHub() {
@@ -35,7 +34,7 @@ func InitHub() {
 			c := new(ClientMessage)
 			return c
 		}}
-	SnowID, _ = snowflake.NewNode(1)
+
 	go H.Run()
 	log.Println("WS集中管理器Hub创建成功")
 }
@@ -43,7 +42,7 @@ func InitHub() {
 // NewHub 返回一个全局 Hub 实例
 func NewHub() *Hub {
 	return &Hub{
-		Clients:    make(map[uint]*Client),
+		Clients:    make(map[int64]*Client),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 		Broadcast:  make(chan ServerMessage, 256),
@@ -104,5 +103,4 @@ func OnlineHandler(client *Client) {
 	//开辟 读+写goroutine、消费消息的goroutine
 	go client.WritePump()
 	go client.ReadPump()
-	go client.ConfirmHandler()
 }

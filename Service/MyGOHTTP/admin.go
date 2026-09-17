@@ -70,7 +70,7 @@ func ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": err.Error()})
 		return
 	}
-	user, err := DB.QueryUser(uint(id), DB.ByID)
+	user, err := DB.QueryUser(id, DB.ByID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Query user by ID error" + err.Error()})
 		return
@@ -106,12 +106,12 @@ func BanUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1003", "err": err.Error()})
 		return
 	}
-	user, err := DB.QueryUser(uint(id), DB.ByID)
+	user, err := DB.QueryUser(id, DB.ByID)
 	if err != nil || user[0].ID == 0 {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Query user by ID error"})
 		return
 	}
-	err = DB.AdminBanUserHelper(uint(id), t, reason)
+	err = DB.AdminBanUserHelper(int64(id), t, reason)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "1003", "err": "Ban error" + err.Error()})
 		return
@@ -127,7 +127,7 @@ func QueryUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "1003", "err": err.Error()})
 		return
 	}
-	user, err := DB.QueryUserWithInfo(uint(id), DB.ByID)
+	user, err := DB.QueryUserWithInfo(id, DB.ByID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": "1002", "err": "Query user by ID error"})
 		return

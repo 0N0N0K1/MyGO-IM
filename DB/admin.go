@@ -1,6 +1,7 @@
 package DB
 
 import (
+	"MyGO-IM/Utils"
 	"context"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 // InsertUser 插入用户/注册
 func InsertUser(name, email string, pwd string) error {
 	var user = User{
+		ID:       int64(Utils.SnowID.Generate()),
 		Name:     name,
 		Email:    email,
 		Password: pwd,
@@ -88,7 +90,7 @@ func GetFresherToday() uint {
 }
 
 // AdminBanUserHelper admin永久或者暂时全局禁言用户
-func AdminBanUserHelper(userID uint, t int, reason string) error {
+func AdminBanUserHelper(userID int64, t int, reason string) error {
 	if t <= 0 {
 		err := MySQL.Table("users").Where("id=?", userID).Delete(&User{}).Error
 		return err
@@ -102,7 +104,7 @@ func AdminBanUserHelper(userID uint, t int, reason string) error {
 }
 
 // QueryIfBan 查询是否被admin全局禁言
-func QueryIfBan(userID uint) (ban bool, reason string, t time.Duration) {
+func QueryIfBan(userID int64) (ban bool, reason string, t time.Duration) {
 	user := fmt.Sprintf("admin:slience:%d", userID)
 	cmd := RDB.Get(context.TODO(), user)
 	if cmd.Err() != nil {
@@ -115,7 +117,7 @@ func QueryIfBan(userID uint) (ban bool, reason string, t time.Duration) {
 }
 
 // OwnerBanUserHelper 群主永久或者暂时全局禁言用户
-func OwnerBanUserHelper(userID, groupID uint, t time.Duration) error {
+func OwnerBanUserHelper(userID, groupID int64, t time.Duration) error {
 	if t <= 0 {
 		err := MySQL.Table("users").Where("id=?", userID).Delete(&User{}).Error
 		return err
@@ -129,7 +131,7 @@ func OwnerBanUserHelper(userID, groupID uint, t time.Duration) error {
 }
 
 // QueryIfSilence 查询是否被群主禁言
-func QueryIfSilence(userID, groupID uint) (ban bool, t time.Duration) {
+func QueryIfSilence(userID, groupID int64) (ban bool, t time.Duration) {
 	user := fmt.Sprintf("groups:%d:silence:%d", groupID, userID)
 	cmd := RDB.Get(context.TODO(), user)
 	if cmd.Err() != nil {
@@ -141,7 +143,7 @@ func QueryIfSilence(userID, groupID uint) (ban bool, t time.Duration) {
 }
 
 // DeleteUser 删除用户
-func DeleteUser(userID uint) error {
+func DeleteUser(userID int64) error {
 	err := MySQL.Table("user_infos").Where("user_id=?", userID).Delete(&UserInfo{}).Error
 	if err != nil {
 		return err

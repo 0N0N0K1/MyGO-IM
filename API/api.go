@@ -47,10 +47,12 @@ func InitRouters() {
 			Users.DELETE("/friends", MyGOHTTP.DeleteFriend)
 		}
 		{
-			// 查询聊天记录
-			Users.GET("/message", MyGOHTTP.GetMessage)
+			// 拉取聊天记录
+			Users.GET("/message", MyGOHTTP.PullMsgByCID)
+			// 查询聊天记录 <弃用>
+			Users.GET("/<message>", MyGOHTTP.GetMessage)
 		}
-		// 升级为 WS 拉取消息
+		// 升级为 WS 获得推送消息
 		Users.GET("/chat", MyGOHTTP.WSUpgrade)
 
 		//  test connection

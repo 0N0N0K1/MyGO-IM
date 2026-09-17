@@ -9,6 +9,7 @@ const (
 	ByID = iota
 	ByEmail
 	ByName
+	ByCID
 	ALL
 )
 
@@ -17,7 +18,7 @@ type DetailInfo struct {
 	UserInfo
 }
 type User struct {
-	ID         uint   `gorm:"primaryKey"`
+	ID         int64  `gorm:"primaryKey"`
 	Name       string `gorm:"size:64;not null"`
 	Online     int    `gorm:"-"`
 	LastOnline *time.Time
@@ -27,59 +28,62 @@ type User struct {
 }
 
 type UserInfo struct {
-	UserID    uint      `json:"-" gorm:"primaryKey"`
-	Addr      string    `json:"addr" binding:"omitempty,min=1,max=255"`
-	Age       int       `json:"-" binding:"omitempty,gte=0,lte=150"`
-	Birthday  time.Time `json:"birthday" binding:"omitempty,datetime=2006-01-02"`
-	Gender    string    `json:"gender" binding:"omitempty,oneof=male female unknown"`
-	Signature string    `json:"signature" binding:"omitempty,max=255"`
-	CreatedAt time.Time `json:"-" gorm:"autoCreateTime"`
-	UpdatedAt time.Time `json:"-" gorm:"autoUpdateTime"`
+	UserID    int64      `json:"-" gorm:"primaryKey"`
+	Addr      string     `json:"addr" binding:"omitempty,min=1,max=255"`
+	Age       int        `json:"-" binding:"omitempty,gte=0,lte=150"`
+	Birthday  *time.Time `json:"birthday" binding:"omitempty,datetime=2006:01:02"`
+	Gender    string     `json:"gender" binding:"omitempty,oneof=male female unknown"`
+	Signature string     `json:"signature" binding:"omitempty,max=255"`
+	CreatedAt time.Time  `json:"-" gorm:"autoCreateTime"`
+	UpdatedAt time.Time  `json:"-" gorm:"autoUpdateTime"`
 
 	User *User `json:"-" gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 type Group struct {
-	ID        uint      `gorm:"primarykey"`
-	WriteSeq  uint64    `gorm:"default:1"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`
-	GroupName string    `gorm:"size:100;not null"`
-	OwnerID   uint      `gorm:"primaryKey;comment:群主ID"`
-	OwnerName string    `gorm:"size:100;not null"`
-
-	Owner *User `gorm:"foreignKey:OwnerID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	ID             int64     `gorm:"primarykey"`
+	WriteSeq       uint64    `gorm:"default:1"`
+	CreatedAt      time.Time `gorm:"autoCreateTime"`
+	UpdatedAt      time.Time `gorm:"autoUpdateTime"`
+	ConversationId string
+	MemberNum      uint16
+	GroupName      string `gorm:"size:100;not null"`
+	OwnerID        int64  `gorm:"primaryKey;comment:群主ID"`
+	OwnerName      string `gorm:"size:100;not null"`
+	Owner          *User  `gorm:"foreignKey:OwnerID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 type UserUser struct {
-	ActiveID        uint      `gorm:"primaryKey;comment:主动添加方"`
-	PassiveID       uint      `gorm:"primaryKey;comment:被动添加方"`
-	CreatedAt       time.Time `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time `gorm:"autoUpdateTime"`
-	ActiveReadSeq   uint64    `gorm:"default:1"`
-	ActiveWriteSeq  uint64    `gorm:"default:1"`
-	PassiveReadSeq  uint64    `gorm:"default:1"`
-	PassiveWriteSeq uint64    `gorm:"default:1"`
-	Status          string    `gorm:""` // apply | reject | accept
-	Active          *User     `gorm:"foreignKey:ActiveID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
-	Passive         *User     `gorm:"foreignKey:PassiveID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	ActiveID       int64     `gorm:"primaryKey;comment:主动添加方"`
+	PassiveID      int64     `gorm:"primaryKey;comment:被动添加方"`
+	CreatedAt      time.Time `gorm:"autoCreateTime"`
+	UpdatedAt      time.Time `gorm:"autoUpdateTime"`
+	ID             int64
+	ConversationId string
+	GlobalWriteSeq uint64 `gorm:"default:1"`
+	ActiveReadSeq  uint64 `gorm:"default:1"`
+	PassiveReadSeq uint64 `gorm:"default:1"`
+	Status         string `gorm:""` // apply | reject | accept
+	Active         *User  `gorm:"foreignKey:ActiveID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	Passive        *User  `gorm:"foreignKey:PassiveID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 type GroupUser struct {
-	GroupID   uint      `gorm:"primaryKey"`
-	UserID    uint      `gorm:"primaryKey"`
-	ReadSeq   uint64    `gorm:"default:1"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`
-	Status    string    `gorm:""` // apply | reject | accept
-	Group     *Group    `gorm:"foreignKey:GroupID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
-	User      *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	GroupID        int64  `gorm:"primaryKey"`
+	UserID         int64  `gorm:"primaryKey"`
+	ReadSeq        uint64 `gorm:"default:1"`
+	ConversationId string
+	CreatedAt      time.Time `gorm:"autoCreateTime"`
+	UpdatedAt      time.Time `gorm:"autoUpdateTime"`
+	Status         string    `gorm:""` // apply | reject | accept
+	Group          *Group    `gorm:"foreignKey:GroupID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	User           *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
 type GroupMessage struct {
-	ID             uint `gorm:"primaryKey"`
+	ID             int64 `gorm:"primaryKey"`
 	Seq            uint64
-	ToID           uint
-	FromID         uint
+	ToID           int64
+	FromID         int64
 	ConversationId string
 	Content        string    `gorm:"type:text"`
 	CreatedAt      time.Time `gorm:"autoCreateTime"`
@@ -88,14 +92,13 @@ type GroupMessage struct {
 	From *User  `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE"  json:"-"`
 }
 type PrivateMessage struct {
-	ID             uint `gorm:"primaryKey"`
-	Seq            uint64
-	ToID           uint
-	FromID         uint
+	ID             int64 `gorm:"primaryKey"`
+	ToID           int64
+	FromID         int64
 	ConversationId string
 	Content        string    `gorm:"type:text"`
 	CreatedAt      time.Time `gorm:"autoCreateTime"`
-
-	To   *User `gorm:"foreignKey:ToID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
-	From *User `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	Seq            uint64
+	To             *User `gorm:"foreignKey:ToID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
+	From           *User `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }

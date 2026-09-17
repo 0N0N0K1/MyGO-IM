@@ -22,11 +22,15 @@ func InitMQ() {
 	//声明不同种类消息对应的交换机
 	err = producer.Ch.ExchangeDeclare("MyGO", "x-modulus-hash", true, false, false, false, nil)
 	if err != nil {
-		log.Fatal("x-modulus-hash交换机创建失败")
+		log.Fatal("x-modulus-hash交换机创建失败" + err.Error())
 	}
 	err = producer.Ch.ExchangeDeclare("broadcast", "fanout", true, false, false, false, nil)
 	if err != nil {
-		log.Fatal("x-modulus-hash交换机创建失败")
+		log.Fatal("x-modulus-hash交换机创建失败" + err.Error())
+	}
+	workers := ConsumerWorker()
+	for i := 0; i < Conf.Conf.Worker.Consumer; i++ {
+		go workers()
 	}
 }
 

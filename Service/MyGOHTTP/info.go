@@ -17,7 +17,7 @@ func UpdateInfo(c *gin.Context) {
 		return
 	}
 	postform.Age = time.Now().Year() - postform.Birthday.Year()
-	err = DB.UpdateUserInfo(userID.(uint), postform)
+	err = DB.UpdateUserInfo(userID.(int64), postform)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "UpdateUserInfo: " + err.Error()})
 		return
@@ -33,7 +33,7 @@ func UpdateName(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "nickname too long "})
 		return
 	}
-	err := DB.UpdateUserName(userID.(uint), newName)
+	err := DB.UpdateUserName(userID.(int64), newName)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "UpdateUserName: " + err.Error()})
 		return

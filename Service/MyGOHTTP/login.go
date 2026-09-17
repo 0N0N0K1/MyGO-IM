@@ -51,7 +51,7 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "CreateJWT: " + err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": "0", "msg": "Login successfully!", "token": token})
+	c.JSON(http.StatusOK, gin.H{"code": "0", "msg": "Login successfully!", "token": token, "user": user})
 
 }
 
@@ -104,7 +104,7 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "CreateJWT: " + err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Register successfully!", "token": token})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "Register successfully!", "token": token, "user": user})
 
 }
 
@@ -126,7 +126,7 @@ func AuthCode(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Incorrect password or email address"})
 			return
 		}
-		err := Utils.SendAuthMail(postform.Email)
+		err := DB.SendAuthMail(postform.Email)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 100, "error": "SendAuthMail: " + err.Error()})
 			return
@@ -139,7 +139,7 @@ func AuthCode(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 100, "error": "This email address is already registered"})
 			return
 		}
-		err = Utils.SendAuthMail(postform.Email)
+		err = DB.SendAuthMail(postform.Email)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 100, "msg": "SendAuthMail: " + err.Error()})
 			return
@@ -155,7 +155,7 @@ func AuthCode(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Incorrect password or email address"})
 			return
 		}
-		err = Utils.SendAuthMail(postform.Email)
+		err = DB.SendAuthMail(postform.Email)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 100, "msg": "SendAuthMail: " + err.Error()})
 			return
@@ -192,7 +192,7 @@ func DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "Incorrect password or email address"})
 		return
 	}
-	err = DB.DeleteUser(userID.(uint))
+	err = DB.DeleteUser(userID.(int64))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 100, "error": "DeleteUser fail: " + err.Error()})
 		return

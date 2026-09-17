@@ -35,12 +35,12 @@ func VerifyJWT(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	if ban, reason, t := DB.QueryIfBan(uint(uid)); ban {
+	if ban, reason, t := DB.QueryIfBan(int64(uid)); ban {
 		c.JSON(http.StatusOK, gin.H{"code": 101, "error": "Banned!!!", "reason": reason, "ban-time": t})
 		c.Abort()
 		return
 	}
-	c.Set("actorID", uint(uid))
+	c.Set("actorID", int64(uid))
 	c.Set("actorName", users[0].Name)
 
 	c.Next()
@@ -60,7 +60,7 @@ func GroupMiddleware(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	group := DB.QueryGroup(uint(groupID))
+	group := DB.QueryGroup(int64(groupID))
 	c.Set("gID", group.ID)
 	c.Set("gName", group.GroupName)
 	c.Set("ownerName", group.OwnerName)

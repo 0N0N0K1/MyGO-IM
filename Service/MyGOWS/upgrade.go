@@ -2,6 +2,8 @@ package MyGOWS
 
 import (
 	"MyGO-IM/Conf"
+	"MyGO-IM/DB"
+	"encoding/json"
 	"github.com/gorilla/websocket"
 	"net/http"
 )
@@ -16,7 +18,7 @@ var Upgrader = websocket.Upgrader{
 }
 
 // InitChat 升级为 WS 后负责注册等初始化操作
-func InitChat(userName string, userID uint, conn *websocket.Conn) error {
+func InitChat(userName string, userID int64, conn *websocket.Conn) error {
 
 	////创建AMQP信道
 	//ch, confirms, err := NewChannel()
@@ -56,7 +58,36 @@ func InitChat(userName string, userID uint, conn *websocket.Conn) error {
 	client.Conn = conn
 	client.Send = make(chan []byte, 256)
 	client.AckReady = make(chan struct{})
-	client.Hub.Register <- client
 	client.SendFunc = client.MsgSender()
+	client.Hub.Register <- client
+
+	var syncMsg = make([]SyncMsg, 0)
+	var one SyncMsg
+	result, _ := DB.QueryFrdConversationID(client.ID)
+	for _, frd := range result {
+		readSeq, _, writeSeq := DB.GetPrivateSeq(client.ID, frd.ID)
+		if readSeq < writeSeq-1 {
+			one.ConversationId = frd.ConversationId
+			one.NewSyncSeq = writeSeq
+			one.LastSyncSeq = readSeq
+			syncMsg = append(syncMsg, one)
+		}
+	}
+	result1 := DB.QueryMyGroup(client.ID)
+	for _, grd := range result1 {
+		one.NewSyncSeq = DB.GetGroupWriterSeq(grd.ID)
+		one.LastSyncSeq = DB.GetGroupReadSeq(grd.ID, client.ID)
+		one.ConversationId = grd.ConversationId
+		syncMsg = append(syncMsg, one)
+	}
+	var ServerSyncMsg = ServerSyncMessage{
+		Cmd:     "sync",
+		SyncMsg: syncMsg,
+		ToId:    client.ID,
+		ReplyID: 0,
+		Method:  "system",
+	}
+	data, _ := json.Marshal(ServerSyncMsg)
+	client.Send <- data
 	return nil
 }
