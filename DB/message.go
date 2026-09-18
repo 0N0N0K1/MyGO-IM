@@ -101,3 +101,44 @@ func PullPrivateMsg(conversationID string, limit int, endseq uint64) ([]GroupMes
 
 	return msgs, err
 }
+
+// InsertNotice 插入系统通知防止申请/同意/拒绝……等消息丢失
+func InsertNotice(ID, toid int64, content string) (NoticeMessage, error) {
+	var notice = NoticeMessage{
+		ID:      ID,
+		Read:    false,
+		ToID:    toid,
+		Content: content,
+	}
+	err := MySQL.Table("notice_messages").Create(&notice).Error
+	return notice, err
+}
+
+// QueryMyNewNoticeNum 获取新的系统通知数
+func QueryMyNewNoticeNum(uid int64) ([]int64, int64, error) {
+	var IDs []int64
+	var notices int64
+	err := MySQL.Table("notice_messages").
+		Where("to_id=? and `read`=?", uid, false).
+		Count(&notices).Error
+	err = MySQL.Table("notice_messages").
+		Select("id").
+		Where("to_id=? and `read`=?", uid, false).
+		Find(&IDs).
+		Error
+	return IDs, notices, err
+}
+
+// QueryMyNotice 获取系统通知
+func QueryMyNotice(uid int64, lm int) ([]NoticeMessage, error) {
+	var notices []NoticeMessage
+	err := MySQL.Table("notice_messages").
+		Select("*").
+		Where("to_id=? ", uid).
+		Order("id desc").Limit(lm).
+		Find(&notices).Error
+	MySQL.Table("notice_messages").
+		Where("to_id=? and id<=?", uid, notices[0].ID).
+		UpdateColumn("read", true)
+	return notices, err
+}

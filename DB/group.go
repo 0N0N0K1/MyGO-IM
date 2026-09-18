@@ -14,7 +14,7 @@ func InsertGroup(ownerID int64, ownerName, groupName string) (int64, error) {
 		GroupName:      groupName,
 		OwnerID:        ownerID,
 		OwnerName:      ownerName,
-		ConversationId: fmt.Sprintf("p:%d", ID),
+		ConversationId: fmt.Sprintf("g:%d", ID),
 	}
 	err := MySQL.Table("groups").Create(&group).Error
 	return int64(ID), err

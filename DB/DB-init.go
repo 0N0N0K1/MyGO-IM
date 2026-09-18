@@ -56,6 +56,7 @@ func InitMySQL() {
 		&GroupUser{},
 		&GroupMessage{},
 		&PrivateMessage{},
+		&NoticeMessage{},
 	)
 	if err != nil {
 		log.Fatal("建表失败:", err)

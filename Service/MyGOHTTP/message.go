@@ -110,3 +110,31 @@ func PullMsgByCID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 1112, "error": "conversationID invalid"})
 	return
 }
+
+// PullNotice 拉取系统通知
+func PullNotice(c *gin.Context)  {
+	actorID, _ := c.Get("actorID")
+	limit := c.Query("limit")
+	lm, err := strconv.Atoi(limit)
+	if err != nil || lm <= 0 {
+		lm = 20
+	}
+	notice, err := DB.QueryMyNotice(actorID.(int64), lm)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1111, "error": "QueryMyNotice error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "notices":notice})
+
+}
+
+
+
+
+
+
+
+
+
+
+

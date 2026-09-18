@@ -102,3 +102,10 @@ type PrivateMessage struct {
 	To             *User `gorm:"foreignKey:ToID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 	From           *User `gorm:"foreignKey:FromID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
+
+type NoticeMessage struct {
+	ID      int64 `gorm:"primaryKey"`
+	ToID    int64
+	Read    bool
+	Content string `gorm:"type:text"`
+}

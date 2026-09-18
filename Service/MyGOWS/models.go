@@ -16,24 +16,30 @@ type SyncMsg struct {
 	LastSyncSeq    uint64 `json:"last_sync_seq"`
 	NewSyncSeq     uint64 `json:"new_sync_seq"`
 }
+type Notice struct {
+	NoticeNum int64   `json:"notice_num"`
+	NoticeIDs []int64 `json:"notice_ids"`
+}
+
 type ServerSyncMessage struct {
 	Cmd     string    `json:"cmd"`
 	SyncMsg []SyncMsg `json:"sync_msg"`
 	ToId    int64     `json:"to_id"`
 	ReplyID int64     `json:"reply_id"`
 	Method  string    `json:"method"`
+	Notice  Notice    `json:"notice"`
 }
 
 type SystemMsg struct {
-	Cmd            string `json:"cmd"`
-	ConversationId string `json:"conversation_id"`
-	MsgID          int64  `json:"msg_id"`
-	Resend         bool   `json:"resend"`
-	Desc           string `json:"describe"`
-	ToId           int64  `json:"to_id"`
-	ReplyID        int64  `json:"reply_id"`
-	Method         string `json:"method"`
-	Extra          any    `json:"extra"`
+	Cmd string `json:"cmd"`
+	//ConversationId string `json:"conversation_id"`
+	MsgID   int64  `json:"msg_id"`
+	Resend  bool   `json:"resend"`
+	Desc    string `json:"describe"`
+	ToId    int64  `json:"to_id"`
+	ReplyID int64  `json:"reply_id"`
+	Method  string `json:"method"`
+	Extra   any    `json:"extra"`
 }
 type ClientMessage struct {
 	Cmd            string `json:"cmd"`

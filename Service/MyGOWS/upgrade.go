@@ -5,6 +5,7 @@ import (
 	"MyGO-IM/DB"
 	"encoding/json"
 	"github.com/gorilla/websocket"
+	"log"
 	"net/http"
 )
 
@@ -80,12 +81,20 @@ func InitChat(userName string, userID int64, conn *websocket.Conn) error {
 		one.ConversationId = grd.ConversationId
 		syncMsg = append(syncMsg, one)
 	}
+
+	IDs, noticeNum, _ := DB.QueryMyNewNoticeNum(client.ID)
+	var notice = Notice{
+		NoticeNum: noticeNum,
+		NoticeIDs: IDs,
+	}
+	log.Println(notice)
 	var ServerSyncMsg = ServerSyncMessage{
 		Cmd:     "sync",
 		SyncMsg: syncMsg,
 		ToId:    client.ID,
 		ReplyID: 0,
 		Method:  "system",
+		Notice:  notice,
 	}
 	data, _ := json.Marshal(ServerSyncMsg)
 	client.Send <- data

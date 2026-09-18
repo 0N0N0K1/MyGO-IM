@@ -47,6 +47,8 @@ func InitRouters() {
 			Users.DELETE("/friends", MyGOHTTP.DeleteFriend)
 		}
 		{
+			// 拉取系统通知
+			Users.GET("/notices",MyGOHTTP.PullNotice)
 			// 拉取聊天记录
 			Users.GET("/message", MyGOHTTP.PullMsgByCID)
 			// 查询聊天记录 <弃用>
@@ -73,9 +75,13 @@ func InitRouters() {
 			{
 				// 销毁群聊
 				GroupsWithMW.DELETE("/", MyGOHTTP.DropMyGroup)
-				// 进入群聊
-				GroupsWithMW.DELETE("/members", MyGOHTTP.ExitGroup)
+
+				// 邀请进入群聊
+				GroupsWithMW.POST("/invitation", MyGOHTTP.)
+
 				// 退出群聊
+				GroupsWithMW.DELETE("/members", MyGOHTTP.ExitGroup)
+				// 进入群聊
 				GroupsWithMW.POST("/members", MyGOHTTP.EnterGroup)
 				// 查询群成员
 				GroupsWithMW.GET("/members", MyGOHTTP.GetMembers)

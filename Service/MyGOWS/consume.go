@@ -41,7 +41,7 @@ func ConsumerWorker() func() error {
 				goto loop
 			}
 			switch data.Method {
-			case "private", "system":
+			case "private":
 				H.mu.Lock()
 				cli, ok := H.Clients[data.ToID]
 				H.mu.Unlock()
@@ -73,6 +73,18 @@ func ConsumerWorker() func() error {
 					if ok {
 						cli.Send <- msg.Body
 					}
+				}
+			case "system":
+				H.mu.Lock()
+				cli, ok := H.Clients[data.ToID]
+				H.mu.Unlock()
+				if ok {
+					cli.Send <- msg.Body
+				}
+				var notice SystemMsg
+				json.Unmarshal(msg.Body, &notice)
+				if notice.Cmd == "notice" {
+					DB.InsertNotice(notice.MsgID, notice.ToId, notice.Desc)
 				}
 			}
 		loop:
